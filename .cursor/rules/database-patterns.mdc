@@ -1,0 +1,538 @@
+---
+description: Database design patterns and best practices for Flowence
+globs: ["server/models/**/*", "server/repositories/**/*", "server/migrations/**/*"]
+alwaysApply: false
+---
+
+# Database Patterns for Flowence
+
+## Database Design Principles
+- Use proper normalization (3NF)
+- Implement foreign key constraints
+- Use appropriate data types
+- Create indexes for performance
+- Implement audit trails
+- Use transactions for data consistency
+
+## Entity Definitions
+```typescript
+// User entity
+interface UserEntity {
+  id: string;                    // UUID primary key
+  email: string;                 // Unique email
+  password_hash: string;         // Bcrypt hashed password
+  name: string;                  // User's full name
+  role: 'owner' | 'employee';   // User role
+  store_id: string;             // Foreign key to stores
+  created_at: Date;             // Creation timestamp
+  updated_at: Date;             // Last update timestamp
+}
+
+// Store entity
+interface StoreEntity {
+  id: string;                   // UUID primary key
+  name: string;                 // Store name
+  address?: string;             // Store address
+  phone?: string;               // Store phone
+  currency: string;             // Currency code (USD, EUR, etc.)
+  tax_rate: number;             // Tax rate percentage
+  low_stock_threshold: number;  // Low stock alert threshold
+  created_at: Date;             // Creation timestamp
+  updated_at: Date;             // Last update timestamp
+}
+
+// Product entity
+interface ProductEntity {
+  id: string;                   // UUID primary key
+  store_id: string;             // Foreign key to stores
+  name: string;                 // Product name
+  barcode?: string;             // Unique barcode
+  price: number;                // Selling price
+  cost: number;                 // Cost price
+  stock: number;                // Current stock quantity
+  category?: string;            // Product category
+  description?: string;         // Product description
+  created_at: Date;             // Creation timestamp
+  updated_at: Date;             // Last update timestamp
+}
+
+// Sale entity
+interface SaleEntity {
+  id: string;                   // UUID primary key
+  store_id: string;             // Foreign key to stores
+  user_id: string;              // Foreign key to users
+  total_amount: number;         // Total sale amount
+  tax_amount: number;           // Tax amount
+  payment_method: string;       // Payment method
+  created_at: Date;             // Sale timestamp
+}
+
+// Sale item entity
+interface SaleItemEntity {
+  id: string;                   // UUID primary key
+  sale_id: string;              // Foreign key to sales
+  product_id: string;           // Foreign key to products
+  quantity: number;             // Quantity sold
+  unit_price: number;           // Price per unit at time of sale
+  total_price: number;          // Total price for this line item
+}
+```
+
+## Repository Pattern
+```typescript
+import { Pool } from 'pg';
+import { Product, CreateProductRequest, UpdateProductRequest } from '../types';
+
+export class ProductRepository {
+  private pool: Pool;
+  
+  constructor(pool: Pool) {
+    this.pool = pool;
+  }
+  
+  // Find product by ID
+  async findById(id: string, storeId: string): Promise<Product | null> {
+    const query = `
+      SELECT p.*, s.name as store_name
+      FROM products p
+      JOIN stores s ON p.store_id = s.id
+      WHERE p.id = $1 AND p.store_id = $2
+    `;
+    
+    const result = await this.pool.query(query, [id, storeId]);
+    return result.rows[0] || null;
+  }
+  
+  // Find product by barcode
+  async findByBarcode(barcode: string, storeId: string): Promise<Product | null> {
+    const query = `
+      SELECT * FROM products 
+      WHERE barcode = $1 AND store_id = $2
+    `;
+    
+    const result = await this.pool.query(query, [barcode, storeId]);
+    return result.rows[0] || null;
+  }
+  
+  // Find products with pagination and filtering
+  async findMany(options: {
+    storeId: string;
+    page: number;
+    limit: number;
+    search?: string;
+    category?: string;
+  }): Promise<{
+    data: Product[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const { storeId, page, limit, search, category } = options;
+    const offset = (page - 1) * limit;
+    
+    let whereClause = 'WHERE store_id = $1';
+    const params: any[] = [storeId];
+    let paramIndex = 2;
+    
+    if (search) {
+      whereClause += ` AND (name ILIKE $${paramIndex} OR barcode ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+    
+    if (category) {
+      whereClause += ` AND category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+    
+    // Get total count
+    const countQuery = `SELECT COUNT(*) FROM products ${whereClause}`;
+    const countResult = await this.pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].count);
+    
+    // Get paginated results
+    const dataQuery = `
+      SELECT * FROM products 
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    
+    params.push(limit, offset);
+    const dataResult = await this.pool.query(dataQuery, params);
+    
+    return {
+      data: dataResult.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+  
+  // Create new product
+  async create(data: CreateProductRequest & { storeId: string }): Promise<Product> {
+    const query = `
+      INSERT INTO products (
+        store_id, name, barcode, price, cost, stock, category, description
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `;
+    
+    const values = [
+      data.storeId,
+      data.name,
+      data.barcode || null,
+      data.price,
+      data.cost,
+      data.stock,
+      data.category || null,
+      data.description || null
+    ];
+    
+    const result = await this.pool.query(query, values);
+    return result.rows[0];
+  }
+  
+  // Update product
+  async update(id: string, data: UpdateProductRequest & { storeId: string }): Promise<Product> {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+    
+    if (data.name !== undefined) {
+      fields.push(`name = $${paramIndex}`);
+      values.push(data.name);
+      paramIndex++;
+    }
+    
+    if (data.barcode !== undefined) {
+      fields.push(`barcode = $${paramIndex}`);
+      values.push(data.barcode || null);
+      paramIndex++;
+    }
+    
+    if (data.price !== undefined) {
+      fields.push(`price = $${paramIndex}`);
+      values.push(data.price);
+      paramIndex++;
+    }
+    
+    if (data.cost !== undefined) {
+      fields.push(`cost = $${paramIndex}`);
+      values.push(data.cost);
+      paramIndex++;
+    }
+    
+    if (data.stock !== undefined) {
+      fields.push(`stock = $${paramIndex}`);
+      values.push(data.stock);
+      paramIndex++;
+    }
+    
+    if (data.category !== undefined) {
+      fields.push(`category = $${paramIndex}`);
+      values.push(data.category || null);
+      paramIndex++;
+    }
+    
+    if (data.description !== undefined) {
+      fields.push(`description = $${paramIndex}`);
+      values.push(data.description || null);
+      paramIndex++;
+    }
+    
+    fields.push(`updated_at = NOW()`);
+    
+    const query = `
+      UPDATE products 
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex} AND store_id = $${paramIndex + 1}
+      RETURNING *
+    `;
+    
+    values.push(id, data.storeId);
+    
+    const result = await this.pool.query(query, values);
+    return result.rows[0];
+  }
+  
+  // Delete product
+  async delete(id: string): Promise<void> {
+    const query = 'DELETE FROM products WHERE id = $1';
+    await this.pool.query(query, [id]);
+  }
+  
+  // Check if product has sales
+  async hasSales(id: string): Promise<boolean> {
+    const query = 'SELECT 1 FROM sale_items WHERE product_id = $1 LIMIT 1';
+    const result = await this.pool.query(query, [id]);
+    return result.rows.length > 0;
+  }
+  
+  // Update stock
+  async updateStock(id: string, newStock: number): Promise<void> {
+    const query = `
+      UPDATE products 
+      SET stock = $1, updated_at = NOW()
+      WHERE id = $2
+    `;
+    
+    await this.pool.query(query, [newStock, id]);
+  }
+  
+  // Get low stock products
+  async getLowStockProducts(storeId: string, threshold: number): Promise<Product[]> {
+    const query = `
+      SELECT * FROM products 
+      WHERE store_id = $1 AND stock <= $2
+      ORDER BY stock ASC
+    `;
+    
+    const result = await this.pool.query(query, [storeId, threshold]);
+    return result.rows;
+  }
+}
+```
+
+## Migration Patterns
+```typescript
+// Migration file: 001_create_users_table.sql
+export const up = async (pool: Pool): Promise<void> => {
+  await pool.query(`
+    CREATE TABLE users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      role VARCHAR(50) NOT NULL CHECK (role IN ('owner', 'employee')),
+      store_id UUID REFERENCES stores(id),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE INDEX idx_users_email ON users(email);
+    CREATE INDEX idx_users_store_id ON users(store_id);
+    CREATE INDEX idx_users_role ON users(role);
+  `);
+};
+
+export const down = async (pool: Pool): Promise<void> => {
+  await pool.query('DROP TABLE IF EXISTS users CASCADE');
+};
+
+// Migration file: 002_create_products_table.sql
+export const up = async (pool: Pool): Promise<void> => {
+  await pool.query(`
+    CREATE TABLE products (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      barcode VARCHAR(255) UNIQUE,
+      price DECIMAL(10,2) NOT NULL CHECK (price > 0),
+      cost DECIMAL(10,2) NOT NULL CHECK (cost > 0),
+      stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+      category VARCHAR(100),
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      
+      CONSTRAINT price_greater_than_cost CHECK (price > cost)
+    );
+    
+    CREATE INDEX idx_products_store_id ON products(store_id);
+    CREATE INDEX idx_products_barcode ON products(barcode);
+    CREATE INDEX idx_products_category ON products(category);
+    CREATE INDEX idx_products_stock ON products(stock);
+    CREATE INDEX idx_products_name ON products USING gin(to_tsvector('english', name));
+  `);
+};
+
+export const down = async (pool: Pool): Promise<void> => {
+  await pool.query('DROP TABLE IF EXISTS products CASCADE');
+};
+```
+
+## Transaction Patterns
+```typescript
+// Sales transaction with stock update
+export class SaleService {
+  async createSale(saleData: CreateSaleRequest): Promise<Sale> {
+    const client = await this.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Create sale record
+      const saleQuery = `
+        INSERT INTO sales (store_id, user_id, total_amount, tax_amount, payment_method)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `;
+      
+      const saleResult = await client.query(saleQuery, [
+        saleData.storeId,
+        saleData.userId,
+        saleData.totalAmount,
+        saleData.taxAmount,
+        saleData.paymentMethod
+      ]);
+      
+      const sale = saleResult.rows[0];
+      
+      // Create sale items and update stock
+      for (const item of saleData.items) {
+        // Insert sale item
+        const itemQuery = `
+          INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, total_price)
+          VALUES ($1, $2, $3, $4, $5)
+        `;
+        
+        await client.query(itemQuery, [
+          sale.id,
+          item.productId,
+          item.quantity,
+          item.unitPrice,
+          item.totalPrice
+        ]);
+        
+        // Update product stock
+        const stockQuery = `
+          UPDATE products 
+          SET stock = stock - $1, updated_at = NOW()
+          WHERE id = $2 AND stock >= $1
+        `;
+        
+        const stockResult = await client.query(stockQuery, [item.quantity, item.productId]);
+        
+        if (stockResult.rowCount === 0) {
+          throw new Error(`Insufficient stock for product ${item.productId}`);
+        }
+      }
+      
+      await client.query('COMMIT');
+      return sale;
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+}
+```
+
+## Query Optimization Patterns
+```typescript
+// Use prepared statements for frequently executed queries
+export class ProductRepository {
+  private getProductByIdStatement: string;
+  
+  constructor(pool: Pool) {
+    this.getProductByIdStatement = `
+      SELECT p.*, s.name as store_name
+      FROM products p
+      JOIN stores s ON p.store_id = s.id
+      WHERE p.id = $1 AND p.store_id = $2
+    `;
+  }
+  
+  async findById(id: string, storeId: string): Promise<Product | null> {
+    const result = await this.pool.query(this.getProductByIdStatement, [id, storeId]);
+    return result.rows[0] || null;
+  }
+}
+
+// Use connection pooling
+export class DatabaseConnection {
+  private static pool: Pool;
+  
+  static getPool(): Pool {
+    if (!this.pool) {
+      this.pool = new Pool({
+        host: process.env.DB_HOST,
+        port: parseInt(process.env.DB_PORT || '5432'),
+        database: process.env.DB_NAME,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        max: 20, // Maximum number of clients in the pool
+        idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+        connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
+      });
+    }
+    
+    return this.pool;
+  }
+}
+```
+
+## Audit Trail Patterns
+```typescript
+// Audit log table
+export const createAuditLogTable = async (pool: Pool): Promise<void> => {
+  await pool.query(`
+    CREATE TABLE audit_logs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      table_name VARCHAR(50) NOT NULL,
+      record_id UUID NOT NULL,
+      action VARCHAR(20) NOT NULL, -- INSERT, UPDATE, DELETE
+      old_values JSONB,
+      new_values JSONB,
+      user_id UUID REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE INDEX idx_audit_logs_table_record ON audit_logs(table_name, record_id);
+    CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
+    CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
+  `);
+};
+
+// Audit trigger function
+export const createAuditTrigger = async (pool: Pool): Promise<void> => {
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION audit_trigger_function()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      IF TG_OP = 'DELETE' THEN
+        INSERT INTO audit_logs (table_name, record_id, action, old_values, user_id)
+        VALUES (TG_TABLE_NAME, OLD.id, TG_OP, row_to_json(OLD), current_setting('app.current_user_id', true)::uuid);
+        RETURN OLD;
+      ELSIF TG_OP = 'UPDATE' THEN
+        INSERT INTO audit_logs (table_name, record_id, action, old_values, new_values, user_id)
+        VALUES (TG_TABLE_NAME, NEW.id, TG_OP, row_to_json(OLD), row_to_json(NEW), current_setting('app.current_user_id', true)::uuid);
+        RETURN NEW;
+      ELSIF TG_OP = 'INSERT' THEN
+        INSERT INTO audit_logs (table_name, record_id, action, new_values, user_id)
+        VALUES (TG_TABLE_NAME, NEW.id, TG_OP, row_to_json(NEW), current_setting('app.current_user_id', true)::uuid);
+        RETURN NEW;
+      END IF;
+      RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+};
+```
+
+## Best Practices
+- Use UUIDs for primary keys
+- Implement proper indexing strategy
+- Use foreign key constraints
+- Implement check constraints for data validation
+- Use transactions for multi-table operations
+- Implement audit trails for important data
+- Use prepared statements for security
+- Implement connection pooling
+- Use proper data types (DECIMAL for money, TIMESTAMP for dates)
+- Implement soft deletes where appropriate
+- Use database-level validation in addition to application-level validation
+- Implement proper error handling for database operations
+- Use migrations for schema changes
+- Implement backup and recovery procedures

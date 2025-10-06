@@ -1,0 +1,190 @@
+---
+description: TypeScript coding standards and best practices for Flowence
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# TypeScript Standards for Flowence
+
+## Type Safety
+- Use strict TypeScript configuration
+- Define interfaces for all data structures
+- Use type guards for runtime type checking
+- Prefer `const` over `let`, avoid `var`
+- Use proper generic types and utility types
+
+## Interface Definitions
+```typescript
+// Always define interfaces for API responses
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+  timestamp: string;
+}
+
+// Define interfaces for all entities
+interface Product {
+  id: string;
+  name: string;
+  barcode: string;
+  price: number;
+  cost: number;
+  stock: number;
+  category?: string;
+  description?: string;
+  storeId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'owner' | 'employee';
+  storeId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+## Function Definitions
+```typescript
+// Always use proper return types
+const createProduct = async (
+  productData: CreateProductRequest
+): Promise<ApiResponse<Product>> => {
+  // Implementation
+};
+
+// Use type guards for runtime validation
+const isProduct = (obj: any): obj is Product => {
+  return obj && 
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.price === 'number';
+};
+```
+
+## Error Handling
+```typescript
+// Custom error classes
+class ValidationError extends Error {
+  constructor(message: string, public details: any) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
+// Proper error handling in functions
+const handleApiCall = async <T>(
+  apiCall: () => Promise<T>
+): Promise<T> => {
+  try {
+    return await apiCall();
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+    throw new Error('An unexpected error occurred');
+  }
+};
+```
+
+## React Component Types
+```typescript
+// Always define props interfaces
+interface ProductCardProps {
+  product: Product;
+  onEdit: (product: Product) => void;
+  onDelete: (productId: string) => void;
+  isLoading?: boolean;
+}
+
+// Use React.FC with proper typing
+const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  onEdit,
+  onDelete,
+  isLoading = false
+}) => {
+  // Component implementation
+};
+```
+
+## API Service Types
+```typescript
+// Define request/response types
+interface CreateProductRequest {
+  name: string;
+  barcode?: string;
+  price: number;
+  cost: number;
+  stock: number;
+  category?: string;
+  description?: string;
+}
+
+interface UpdateProductRequest extends Partial<CreateProductRequest> {
+  id: string;
+}
+
+// Service function types
+const ProductService = {
+  create: (data: CreateProductRequest): Promise<ApiResponse<Product>> => {
+    // Implementation
+  },
+  update: (id: string, data: UpdateProductRequest): Promise<ApiResponse<Product>> => {
+    // Implementation
+  },
+  delete: (id: string): Promise<ApiResponse<void>> => {
+    // Implementation
+  }
+};
+```
+
+## Database Model Types
+```typescript
+// Define database entity types
+interface UserEntity {
+  id: string;
+  email: string;
+  password_hash: string;
+  name: string;
+  role: 'owner' | 'employee';
+  store_id: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Define query result types
+interface ProductWithStore extends Product {
+  store: {
+    id: string;
+    name: string;
+  };
+}
+```
+
+## Utility Types
+```typescript
+// Use utility types for flexibility
+type PartialProduct = Partial<Product>;
+type ProductUpdate = Pick<Product, 'id'> & Partial<Omit<Product, 'id'>>;
+type RequiredProductFields = Required<Pick<Product, 'name' | 'price' | 'stock'>>;
+```
+
+## Best Practices
+- Never use `any` type unless absolutely necessary
+- Use `unknown` for truly unknown types
+- Implement proper null/undefined checking
+- Use optional chaining (`?.`) and nullish coalescing (`??`)
+- Define strict return types for all functions
+- Use enums for fixed sets of values
+- Implement proper type narrowing with type guards

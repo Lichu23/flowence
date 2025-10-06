@@ -1,0 +1,527 @@
+---
+description: API design standards and patterns for Flowence backend
+globs: ["server/**/*.ts", "**/routes/**/*", "**/controllers/**/*", "**/services/**/*"]
+alwaysApply: false
+---
+
+# API Standards for Flowence
+
+## RESTful API Design
+- Use resource-based URLs
+- Implement proper HTTP methods (GET, POST, PUT, DELETE)
+- Use consistent response format
+- Implement proper HTTP status codes
+- Use versioning strategy (/api/v1/)
+
+## Response Format Standards
+```typescript
+// Success Response
+interface ApiResponse<T> {
+  success: true;
+  data: T;
+  message?: string;
+  timestamp: string;
+}
+
+// Error Response
+interface ApiErrorResponse {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+  timestamp: string;
+}
+
+// Pagination Response
+interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+```
+
+## Controller Pattern
+```typescript
+import { Request, Response, NextFunction } from 'express';
+import { ProductService } from '../services/ProductService';
+import { ApiResponse, CreateProductRequest, UpdateProductRequest } from '../types';
+
+export class ProductController {
+  // GET /api/products
+  static async getProducts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { page = 1, limit = 10, search, category } = req.query;
+      const storeId = req.user?.storeId;
+      
+      if (!storeId) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Store ID required'
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      const products = await ProductService.getProducts({
+        storeId,
+        page: Number(page),
+        limit: Number(limit),
+        search: search as string,
+        category: category as string
+      });
+      
+      res.json({
+        success: true,
+        data: products.data,
+        pagination: products.pagination,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  
+  // POST /api/products
+  static async createProduct(req: Request, res: Response, next: NextFunction) {
+    try {
+      const productData: CreateProductRequest = req.body;
+      const storeId = req.user?.storeId;
+      
+      if (!storeId) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Store ID required'
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      const product = await ProductService.createProduct({
+        ...productData,
+        storeId
+      });
+      
+      res.status(201).json({
+        success: true,
+        data: product,
+        message: 'Product created successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  
+  // PUT /api/products/:id
+  static async updateProduct(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const updateData: UpdateProductRequest = req.body;
+      const storeId = req.user?.storeId;
+      
+      const product = await ProductService.updateProduct(id, {
+        ...updateData,
+        storeId
+      });
+      
+      res.json({
+        success: true,
+        data: product,
+        message: 'Product updated successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  
+  // DELETE /api/products/:id
+  static async deleteProduct(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const storeId = req.user?.storeId;
+      
+      await ProductService.deleteProduct(id, storeId);
+      
+      res.json({
+        success: true,
+        message: 'Product deleted successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+```
+
+## Service Layer Pattern
+```typescript
+import { Product, CreateProductRequest, UpdateProductRequest } from '../types';
+import { ProductRepository } from '../repositories/ProductRepository';
+import { ValidationError } from '../utils/errors';
+
+export class ProductService {
+  // Get products with filtering and pagination
+  static async getProducts(options: {
+    storeId: string;
+    page: number;
+    limit: number;
+    search?: string;
+    category?: string;
+  }) {
+    const { storeId, page, limit, search, category } = options;
+    
+    const products = await ProductRepository.findMany({
+      storeId,
+      page,
+      limit,
+      search,
+      category
+    });
+    
+    return products;
+  }
+  
+  // Create new product
+  static async createProduct(data: CreateProductRequest & { storeId: string }): Promise<Product> {
+    // Validate business rules
+    if (data.price <= 0) {
+      throw new ValidationError('Price must be greater than 0');
+    }
+    
+    if (data.cost <= 0) {
+      throw new ValidationError('Cost must be greater than 0');
+    }
+    
+    if (data.price <= data.cost) {
+      throw new ValidationError('Price must be greater than cost');
+    }
+    
+    if (data.stock < 0) {
+      throw new ValidationError('Stock cannot be negative');
+    }
+    
+    // Check for duplicate barcode
+    if (data.barcode) {
+      const existingProduct = await ProductRepository.findByBarcode(data.barcode, data.storeId);
+      if (existingProduct) {
+        throw new ValidationError('Product with this barcode already exists');
+      }
+    }
+    
+    const product = await ProductRepository.create(data);
+    return product;
+  }
+  
+  // Update existing product
+  static async updateProduct(id: string, data: UpdateProductRequest & { storeId: string }): Promise<Product> {
+    const existingProduct = await ProductRepository.findById(id, data.storeId);
+    
+    if (!existingProduct) {
+      throw new ValidationError('Product not found');
+    }
+    
+    // Validate business rules
+    if (data.price !== undefined && data.price <= 0) {
+      throw new ValidationError('Price must be greater than 0');
+    }
+    
+    if (data.cost !== undefined && data.cost <= 0) {
+      throw new ValidationError('Cost must be greater than 0');
+    }
+    
+    if (data.price !== undefined && data.cost !== undefined && data.price <= data.cost) {
+      throw new ValidationError('Price must be greater than cost');
+    }
+    
+    if (data.stock !== undefined && data.stock < 0) {
+      throw new ValidationError('Stock cannot be negative');
+    }
+    
+    // Check for duplicate barcode if updating
+    if (data.barcode && data.barcode !== existingProduct.barcode) {
+      const duplicateProduct = await ProductRepository.findByBarcode(data.barcode, data.storeId);
+      if (duplicateProduct && duplicateProduct.id !== id) {
+        throw new ValidationError('Product with this barcode already exists');
+      }
+    }
+    
+    const updatedProduct = await ProductRepository.update(id, data);
+    return updatedProduct;
+  }
+  
+  // Delete product
+  static async deleteProduct(id: string, storeId: string): Promise<void> {
+    const product = await ProductRepository.findById(id, storeId);
+    
+    if (!product) {
+      throw new ValidationError('Product not found');
+    }
+    
+    // Check if product has been used in sales
+    const hasSales = await ProductRepository.hasSales(id);
+    if (hasSales) {
+      throw new ValidationError('Cannot delete product that has been used in sales');
+    }
+    
+    await ProductRepository.delete(id);
+  }
+}
+```
+
+## Route Configuration
+```typescript
+import { Router } from 'express';
+import { ProductController } from '../controllers/ProductController';
+import { authMiddleware } from '../middleware/auth';
+import { validateRequest } from '../middleware/validation';
+import { createProductSchema, updateProductSchema } from '../schemas/productSchemas';
+
+const router = Router();
+
+// Apply authentication middleware to all routes
+router.use(authMiddleware);
+
+// GET /api/products - Get all products
+router.get('/', ProductController.getProducts);
+
+// POST /api/products - Create new product
+router.post(
+  '/',
+  validateRequest(createProductSchema),
+  ProductController.createProduct
+);
+
+// PUT /api/products/:id - Update product
+router.put(
+  '/:id',
+  validateRequest(updateProductSchema),
+  ProductController.updateProduct
+);
+
+// DELETE /api/products/:id - Delete product
+router.delete('/:id', ProductController.deleteProduct);
+
+export default router;
+```
+
+## Middleware Patterns
+```typescript
+// Authentication middleware
+export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Access token required'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Invalid or expired token'
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// Role-based access control
+export const requireRole = (roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Insufficient permissions'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    next();
+  };
+};
+
+// Request validation middleware
+export const validateRequest = (schema: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const validated = schema.validate(req.body, { abortEarly: false });
+      req.body = validated;
+      next();
+    } catch (error) {
+      const details = error.details.map((detail: any) => ({
+        field: detail.path.join('.'),
+        message: detail.message
+      }));
+      
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input data',
+          details
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+};
+```
+
+## Error Handling
+```typescript
+// Custom error classes
+export class ValidationError extends Error {
+  constructor(message: string, public details?: any) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
+export class NotFoundError extends Error {
+  constructor(resource: string) {
+    super(`${resource} not found`);
+    this.name = 'NotFoundError';
+  }
+}
+
+export class UnauthorizedError extends Error {
+  constructor(message: string = 'Unauthorized access') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+// Global error handler
+export const errorHandler = (
+  error: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  console.error('Error:', error);
+  
+  if (error instanceof ValidationError) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: error.message,
+        details: error.details
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  if (error instanceof NotFoundError) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: error.message
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  if (error instanceof UnauthorizedError) {
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: error.message
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Default error response
+  res.status(500).json({
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'An internal error occurred'
+    },
+    timestamp: new Date().toISOString()
+  });
+};
+```
+
+## API Documentation Standards
+```typescript
+/**
+ * @swagger
+ * /api/products:
+ *   get:
+ *     summary: Get all products
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ */
+```
+
+## Best Practices
+- Always validate input data
+- Use proper HTTP status codes
+- Implement consistent error handling
+- Use middleware for cross-cutting concerns
+- Implement rate limiting
+- Use proper logging
+- Implement request/response compression
+- Use HTTPS in production
+- Implement proper CORS configuration
+- Use database transactions for multi-table operations
