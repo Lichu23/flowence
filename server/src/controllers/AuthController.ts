@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { AuthService } from '../services/AuthService';
 import { ApiResponse, LoginRequest, RegisterRequest, RefreshTokenRequest } from '../types';
-import { ValidationError, AuthenticationError } from '../types';
+import { ValidationError, AuthenticationError, ConflictError } from '../types';
 
 export class AuthController {
   private authService: AuthService;
@@ -93,7 +93,10 @@ export class AuthController {
       }
 
       const registerData: RegisterRequest = req.body;
+      console.log('📝 AuthController: Starting registration for:', registerData.email);
+      
       const result = await this.authService.register(registerData);
+      console.log('✅ AuthController: Registration service completed successfully');
 
       const response: ApiResponse = {
         success: true,
@@ -102,9 +105,22 @@ export class AuthController {
         timestamp: new Date().toISOString()
       };
 
+      console.log('📤 AuthController: Sending response:', {
+        success: response.success,
+        hasData: !!response.data,
+        message: response.message,
+        hasAccessToken: !!(response.data as any)?.accessToken,
+        userId: (response.data as any)?.user?.id
+      });
+
+      // Log the complete response structure
+      console.log('📤 AuthController: Full response object being sent:', JSON.stringify(response, null, 2));
+
       res.status(201).json(response);
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('❌ AuthController: Registration error occurred:', error);
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error message:', error instanceof Error ? error.message : 'Unknown error');
 
       if (error instanceof ValidationError) {
         res.status(400).json({
@@ -113,6 +129,18 @@ export class AuthController {
             code: 'VALIDATION_ERROR',
             message: error.message,
             details: error.details
+          },
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      if (error instanceof ConflictError) {
+        res.status(409).json({
+          success: false,
+          error: {
+            code: 'USER_EXISTS',
+            message: (error as ConflictError).message
           },
           timestamp: new Date().toISOString()
         });
@@ -222,6 +250,9 @@ export class AuthController {
       }
 
       const { refreshToken }: RefreshTokenRequest = req.body;
+      console.log('🔄 AuthController: Refresh token request received');
+      console.log('🔑 AuthController: Refresh token (first 50 chars):', refreshToken?.substring(0, 50) + '...');
+      
       const result = await this.authService.refreshToken(refreshToken);
 
       const response: ApiResponse = {
@@ -447,8 +478,27 @@ export class AuthController {
 
   async logout(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
-      await this.authService.logout(userId);
+      console.log('🚪 AuthController: Logout request received');
+      
+      // Try to get user from token, but don't fail if token is invalid
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+      
+      if (token) {
+        try {
+          // Try to decode the token to get user info (without verification)
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.decode(token);
+          
+          if (decoded && decoded.userId) {
+            console.log('👤 AuthController: Logging out user:', decoded.userId);
+            await this.authService.logout(decoded.userId);
+          }
+        } catch (tokenError) {
+          console.log('⚠️ AuthController: Invalid token for logout, but continuing...');
+          // Continue with logout even if token is invalid
+        }
+      }
 
       const response: ApiResponse = {
         success: true,
@@ -456,15 +506,51 @@ export class AuthController {
         timestamp: new Date().toISOString()
       };
 
+      console.log('✅ AuthController: Logout completed successfully');
       res.status(200).json(response);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ AuthController: Logout error:', error);
+
+      // Even if logout fails, return success to client
+      const response: ApiResponse = {
+        success: true,
+        message: 'Logout completed',
+        timestamp: new Date().toISOString()
+      };
+
+      res.status(200).json(response);
+    }
+  }
+
+  async me(req: Request, res: Response): Promise<void> {
+    try {
+      const user = (req as any).user;
+      console.log('👤 AuthController: Getting user profile for:', user.email);
+      
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          user: user
+        },
+        message: 'User profile retrieved successfully',
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('📤 AuthController: Sending user profile:', {
+        userId: user.id,
+        email: user.email,
+        storeId: user.storeId
+      });
+
+      res.json(response);
+    } catch (error) {
+      console.error('Get user profile error:', error);
 
       res.status(500).json({
         success: false,
         error: {
-          code: 'LOGOUT_FAILED',
-          message: 'Logout failed'
+          code: 'PROFILE_RETRIEVAL_FAILED',
+          message: 'Failed to retrieve user profile'
         },
         timestamp: new Date().toISOString()
       });

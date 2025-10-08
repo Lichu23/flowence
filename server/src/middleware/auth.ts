@@ -1,13 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
-import { UserModel } from '../models/User';
-import { AuthenticatedRequest, JwtPayload, AuthenticationError, AuthorizationError } from '../types';
+import { UserModel } from '../models/UserModel';
+import { AuthenticatedRequest, JwtPayload } from '../types';
 
 const userModel = new UserModel();
 
-export const authenticateToken = async (
-  req: AuthenticatedRequest,
+export const authenticateToken: RequestHandler = async (
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -28,7 +28,7 @@ export const authenticateToken = async (
     }
 
     // Verify token
-    const payload = jwt.verify(token, config.jwt.secret, {
+    const payload = jwt.verify(token, config.jwt.secret as string, {
       issuer: 'flowence',
       audience: 'flowence-users'
     }) as JwtPayload;
@@ -60,7 +60,7 @@ export const authenticateToken = async (
     }
 
     // Add user to request
-    req.user = user;
+    (req as AuthenticatedRequest).user = user;
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
@@ -173,9 +173,9 @@ export const requireStoreOwnership = (req: AuthenticatedRequest, res: Response, 
   next();
 };
 
-export const optionalAuth = async (
-  req: AuthenticatedRequest,
-  res: Response,
+export const optionalAuth: RequestHandler = async (
+  req: Request,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
@@ -188,7 +188,7 @@ export const optionalAuth = async (
     }
 
     // Verify token
-    const payload = jwt.verify(token, config.jwt.secret, {
+    const payload = jwt.verify(token, config.jwt.secret as string, {
       issuer: 'flowence',
       audience: 'flowence-users'
     }) as JwtPayload;
@@ -197,7 +197,7 @@ export const optionalAuth = async (
       // Get user from database
       const user = await userModel.findById(payload.userId);
       if (user) {
-        req.user = user;
+        (req as AuthenticatedRequest).user = user;
       }
     }
 

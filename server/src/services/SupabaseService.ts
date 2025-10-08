@@ -49,10 +49,12 @@ export class SupabaseService {
     name: string;
     role: 'owner' | 'employee';
     storeId?: string;
+    email_confirm?: boolean;
   }) {
     const { data, error } = await this.supabaseAdmin.auth.admin.createUser({
       email: userData.email,
       password: userData.password,
+      email_confirm: userData.email_confirm || false,
       user_metadata: {
         name: userData.name,
         role: userData.role,

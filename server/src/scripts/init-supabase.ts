@@ -11,7 +11,7 @@ async function initializeSupabase() {
   try {
     // Test Supabase connection
     console.log('🔌 Testing Supabase connection...');
-    const { data, error } = await supabaseService.getAdminClient()
+    const { error } = await supabaseService.getAdminClient()
       .from('users')
       .select('count')
       .limit(1);
@@ -30,7 +30,7 @@ async function initializeSupabase() {
     
     for (const table of tables) {
       try {
-        const { data, error } = await supabaseService.getAdminClient()
+        const { error } = await supabaseService.getAdminClient()
           .from(table)
           .select('*')
           .limit(1);
@@ -122,7 +122,7 @@ async function seedSupabaseDatabase() {
       }
     ];
 
-    const { data: createdProducts, error: productsError } = await supabaseService.getAdminClient()
+    const { error: productsError } = await supabaseService.getAdminClient()
       .from('products')
       .insert(products)
       .select();

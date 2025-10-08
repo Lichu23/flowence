@@ -8,8 +8,8 @@ import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import { ApiResponse } from './types';
 
-// Import simple routes
-import authSimpleRoutes from './routes/auth-simple';
+// Import auth routes
+import authRoutes from './routes/auth';
 
 const app: Application = express();
 
@@ -125,7 +125,7 @@ app.get('/api', (_req: Request, res: Response) => {
 });
 
 // Mount API routes
-app.use('/api/auth', authSimpleRoutes);
+app.use('/api/auth', authRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

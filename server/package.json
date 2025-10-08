@@ -17,11 +17,10 @@
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
     "prestart": "npm run build",
-    "db:init": "ts-node src/scripts/init-db.ts",
-    "db:migrate": "ts-node src/scripts/init-db.ts",
-    "db:seed": "ts-node -e \"import('./src/database/connection').then(db => db.dbConnection.connect().then(() => db.dbConnection.seedDatabase()).then(() => db.dbConnection.disconnect()))\"",
     "supabase:init": "ts-node src/scripts/init-supabase.ts",
-    "supabase:seed": "ts-node src/scripts/seed-supabase.ts"
+    "supabase:seed": "ts-node src/scripts/seed-supabase.ts",
+    "supabase:cleanup": "ts-node src/scripts/cleanup-supabase-auth.ts",
+    "test:jwt": "ts-node src/scripts/test-jwt.ts"
   },
   "keywords": [
     "supermarket",
@@ -45,8 +44,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "passport": "^0.7.0",
-    "passport-jwt": "^4.0.1",
-    "pg": "^8.11.3"
+    "passport-jwt": "^4.0.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -58,7 +56,6 @@
     "@types/node": "^24.6.2",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
-    "@types/pg": "^8.10.9",
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",

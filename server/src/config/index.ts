@@ -13,6 +13,16 @@ export const serverConfig = {
   appDescription: process.env['APP_DESCRIPTION'] || 'All-in-one supermarket management system'
 };
 
+// Supabase configuration
+export const supabaseConfig = {
+  url: process.env['SUPABASE_URL']!,
+  anonKey: process.env['SUPABASE_ANON_KEY']!,
+  serviceRoleKey: process.env['SUPABASE_SERVICE_ROLE_KEY']!,
+  projectId: process.env['SUPABASE_PROJECT_ID']!,
+  region: process.env['SUPABASE_REGION'] || 'us-east-1',
+  databaseUrl: process.env['SUPABASE_DATABASE_URL']
+};
+
 // JWT configuration
 export const jwtConfig = {
   secret: process.env['JWT_SECRET'] || 'default-jwt-secret-change-in-production',
@@ -55,6 +65,7 @@ export const devToolsConfig = {
 
 const config = {
   server: serverConfig,
+  supabase: supabaseConfig,
   jwt: jwtConfig,
   security: securityConfig,
   cors: corsConfig,
