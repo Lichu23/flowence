@@ -1,12 +1,27 @@
+/**
+ * Authentication Middleware
+ * JWT token validation and user authentication
+ */
+
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { UserModel } from '../models/UserModel';
-import { AuthenticatedRequest, JwtPayload } from '../types';
+import { AuthenticatedRequest } from '../types';
 
 const userModel = new UserModel();
 
-export const authenticateToken: RequestHandler = async (
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
+
+/**
+ * Authenticate middleware
+ * Validates JWT token and attaches user to request
+ */
+export const authenticate: RequestHandler = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -33,18 +48,6 @@ export const authenticateToken: RequestHandler = async (
       audience: 'flowence-users'
     }) as JwtPayload;
 
-    if (payload.type !== 'access') {
-      res.status(401).json({
-        success: false,
-        error: {
-          code: 'INVALID_TOKEN_TYPE',
-          message: 'Invalid token type'
-        },
-        timestamp: new Date().toISOString()
-      });
-      return;
-    }
-
     // Get user from database
     const user = await userModel.findById(payload.userId);
     if (!user) {
@@ -60,7 +63,7 @@ export const authenticateToken: RequestHandler = async (
     }
 
     // Add user to request
-    (req as AuthenticatedRequest).user = user;
+    (req as any).user = user;
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
@@ -87,9 +90,14 @@ export const authenticateToken: RequestHandler = async (
   }
 };
 
+/**
+ * Require specific roles
+ */
 export const requireRole = (roles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
+    const user = (req as any).user;
+    
+    if (!user) {
       res.status(401).json({
         success: false,
         error: {
@@ -101,7 +109,7 @@ export const requireRole = (roles: string[]) => {
       return;
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(user.role)) {
       res.status(403).json({
         success: false,
         error: {
@@ -117,62 +125,10 @@ export const requireRole = (roles: string[]) => {
   };
 };
 
-export const requireStoreAccess = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-  if (!req.user) {
-    res.status(401).json({
-      success: false,
-      error: {
-        code: 'AUTHENTICATION_REQUIRED',
-        message: 'Authentication required'
-      },
-      timestamp: new Date().toISOString()
-    });
-    return;
-  }
-
-  if (!req.user.storeId) {
-    res.status(403).json({
-      success: false,
-      error: {
-        code: 'NO_STORE_ACCESS',
-        message: 'User does not have access to any store'
-      },
-      timestamp: new Date().toISOString()
-    });
-    return;
-  }
-
-  next();
-};
-
-export const requireStoreOwnership = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-  if (!req.user) {
-    res.status(401).json({
-      success: false,
-      error: {
-        code: 'AUTHENTICATION_REQUIRED',
-        message: 'Authentication required'
-      },
-      timestamp: new Date().toISOString()
-    });
-    return;
-  }
-
-  if (req.user.role !== 'owner') {
-    res.status(403).json({
-      success: false,
-      error: {
-        code: 'OWNER_REQUIRED',
-        message: 'Store ownership required'
-      },
-      timestamp: new Date().toISOString()
-    });
-    return;
-  }
-
-  next();
-};
-
+/**
+ * Optional authentication
+ * Attaches user if token is valid, but doesn't require it
+ */
 export const optionalAuth: RequestHandler = async (
   req: Request,
   _res: Response,
@@ -193,12 +149,10 @@ export const optionalAuth: RequestHandler = async (
       audience: 'flowence-users'
     }) as JwtPayload;
 
-    if (payload.type === 'access') {
-      // Get user from database
-      const user = await userModel.findById(payload.userId);
-      if (user) {
-        (req as AuthenticatedRequest).user = user;
-      }
+    // Get user from database
+    const user = await userModel.findById(payload.userId);
+    if (user) {
+      (req as any).user = user;
     }
 
     next();
@@ -207,40 +161,3 @@ export const optionalAuth: RequestHandler = async (
     next();
   }
 };
-
-export const rateLimitByUser = (maxRequests: number, windowMs: number) => {
-  const requests = new Map<string, { count: number; resetTime: number }>();
-
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      next();
-      return;
-    }
-
-    const userId = req.user.id;
-    const now = Date.now();
-    const userRequests = requests.get(userId);
-
-    if (!userRequests || now > userRequests.resetTime) {
-      requests.set(userId, { count: 1, resetTime: now + windowMs });
-      next();
-      return;
-    }
-
-    if (userRequests.count >= maxRequests) {
-      res.status(429).json({
-        success: false,
-        error: {
-          code: 'RATE_LIMIT_EXCEEDED',
-          message: 'Too many requests from this user'
-        },
-        timestamp: new Date().toISOString()
-      });
-      return;
-    }
-
-    userRequests.count++;
-    next();
-  };
-};
-

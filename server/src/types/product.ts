@@ -1,6 +1,10 @@
+/**
+ * Product Types (Multi-Store Architecture)
+ */
+
 export interface Product {
   id: string;
-  storeId: string;
+  store_id: string; // Multi-store: each product belongs to one store
   name: string;
   barcode?: string;
   price: number;
@@ -8,29 +12,48 @@ export interface Product {
   stock: number;
   category?: string;
   description?: string;
-  imageUrl?: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  image_url?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface ProductCategory {
-  id: string;
+export interface CreateProductData {
+  store_id: string;
   name: string;
+  barcode?: string;
+  price: number;
+  cost: number;
+  stock?: number;
+  category?: string;
   description?: string;
-  storeId: string;
-  productCount: number;
-  createdAt: Date;
-  updatedAt: Date;
+  image_url?: string;
+}
+
+export interface UpdateProductData {
+  name?: string;
+  barcode?: string;
+  price?: number;
+  cost?: number;
+  stock?: number;
+  category?: string;
+  description?: string;
+  image_url?: string;
+}
+
+export interface ProductWithStore extends Product {
+  store: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface ProductStats {
-  totalProducts: number;
-  totalValue: number;
-  lowStockCount: number;
-  outOfStockCount: number;
-  averagePrice: number;
-  topCategories: Array<{
+  total_products: number;
+  total_value: number;
+  low_stock_count: number;
+  out_of_stock_count: number;
+  average_price: number;
+  top_categories: Array<{
     category: string;
     count: number;
     value: number;
@@ -39,22 +62,34 @@ export interface ProductStats {
 
 export interface StockMovement {
   id: string;
-  productId: string;
+  product_id: string;
+  store_id: string;
   type: 'in' | 'out' | 'adjustment';
   quantity: number;
   reason: string;
-  referenceId?: string; // Sale ID or adjustment ID
-  userId: string;
-  createdAt: Date;
+  reference_id?: string; // Sale ID or adjustment ID
+  user_id: string;
+  created_at: string;
 }
 
 export interface LowStockAlert {
-  productId: string;
-  productName: string;
-  currentStock: number;
+  product_id: string;
+  product_name: string;
+  current_stock: number;
   threshold: number;
   category?: string;
-  lastRestocked?: Date;
+  last_restocked?: string;
+}
+
+export interface ProductSearchParams {
+  store_id: string; // Required: always search within a store
+  search?: string;
+  category?: string;
+  min_price?: number;
+  max_price?: number;
+  low_stock?: boolean;
+  page?: number;
+  limit?: number;
 }
 
 export interface ProductSearchResult {
@@ -62,14 +97,11 @@ export interface ProductSearchResult {
   total: number;
   page: number;
   limit: number;
-  totalPages: number;
+  total_pages: number;
 }
 
 export interface BulkProductOperation {
-  operation: 'update' | 'delete' | 'activate' | 'deactivate';
-  productIds: string[];
-  data?: Partial<Product>;
+  operation: 'update' | 'delete';
+  product_ids: string[];
+  data?: Partial<UpdateProductData>;
 }
-
-
-

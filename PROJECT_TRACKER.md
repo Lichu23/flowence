@@ -1,238 +1,451 @@
-# Flowence - Project Tracker
+# Flowence - Project Tracker (Multi-Store Architecture)
 
 ## Project Overview
-**Project Name:** Flowence - All-in-One Supermarket Management App  
-**Version:** 1.0 (MVP)  
+**Project Name:** Flowence - All-in-One Multi-Store Management App  
+**Version:** 1.0 (MVP) - Multi-Store Edition  
 **Start Date:** October 2025  
 **Target Completion:** [To be defined]  
-**Status:** Planning Phase  
+**Status:** Phase 1 - Foundation & Setup  
+
+## Key Architecture Difference
+**🏪 Multi-Store Capability:** Each owner can manage **multiple stores**. Employees belong to specific stores within an owner's organization.
 
 ## Project Goals
 - Reduce manual errors in inventory and sales by 50%
-- Facilitate collaboration between owners and employees
+- Enable owners to manage multiple store locations from a single account
+- Facilitate collaboration between owners and employees across different stores
 - Accelerate sales process (minutes to seconds via scanner)
 - Provide accessible, low-cost tool for Latin America/Spain entrepreneurs
 
 ## Success Metrics
-- **Adoption:** 10+ beta users (owners) in first month
+- **Adoption:** 10+ beta users (owners) managing 15+ stores in first month
 - **Usage:** 80% of sales processed via app without errors
 - **Feedback:** NPS > 7/10 in initial tests
 - **Technical:** Response time < 2s per action; 99% uptime
+- **Multi-Store:** Seamless store switching without logout
 
 ## Milestones
 
-### Phase 1: Foundation & Setup (Weeks 1-2) ✅ COMPLETED
-- [x] Project setup and environment configuration
-- [x] Database schema design and setup
-- [x] Authentication system implementation
-- [x] Basic UI framework setup
-- [x] Development environment documentation
+### Phase 1: Foundation & Multi-Store Setup (Weeks 1-3) ✅ COMPLETADO (100%)
+**Goal:** Establish the foundation with multi-store architecture from the beginning
 
-**Deliverables:** ✅ COMPLETED
-- ✅ Working authentication system (JWT, login/register, password management)
-- ✅ Complete database structure (Users, Stores, Products, Sales, Invitations)
-- ✅ Development environment ready (TypeScript, ESLint, Prettier, testing)
-- ✅ Basic React frontend with routing and authentication
-- ✅ Database migrations and connection system
-- ✅ Security middleware and validation
+**Status:** ✅ Backend Complete | ✅ Frontend Complete
 
-🔍 Funcionalidades de Phase 1 que debes verificar:
-1. ✅ Sistema de Autenticación (Ya probado)
-[x] Registro de usuarios
-[x] Login de usuarios
-[x] Redirección automática al dashboard
-[x] Manejo de tokens JWT
-2. 🔍 Navegación y Rutas (Verificar)
-[x] Dashboard - ¿Se carga correctamente con datos del usuario?
-[x] Products - ¿Se muestran los productos mock correctamente?
-[x] Sales - ¿La página de ventas se carga sin errores?
-[x] Reports - ¿Los reportes se muestran correctamente?
-[x] Receipts - ¿La lista de recibos funciona?
-[x] Users - ¿Solo visible para owners? ¿Se muestra correctamente?
-[x] Settings - ¿Solo visible para owners? ¿Se carga la configuración?
-3. 🔍 Control de Acceso Basado en Roles (CRÍTICO)
-[x] Como Owner: ¿Puedes ver todas las páginas (Users, Settings)?
-[x] Como Employee: ¿Solo ves las páginas permitidas?
-[x] Protección de rutas: ¿Te redirige al login si no estás autenticado?
-4. 🔍 Persistencia de Sesión
-[x] Refresh de página: ¿Mantiene la sesión al recargar?
-[x] Navegación: ¿Puedes navegar entre páginas sin perder la sesión?
-[x] Logout: ¿Funciona correctamente y limpia la sesión?
-5. 🔍 API Endpoints del Backend (Verificar con herramientas)
-[x] POST /api/auth/register - ✅ Funciona
-[x] POST /api/auth/login - ✅ Funciona
-[x] GET /api/auth/me - ¿Devuelve los datos del usuario?
-[x] POST /api/auth/logout -  ✅ Funciona
-[x] POST /api/auth/refresh-token - ¿Renueva tokens?
-6. 🔍 Base de Datos y Supabase
-[x] Creación de usuarios: ¿Se crean en Supabase Auth y en tu tabla users?
-[x] Creación de stores: ¿Se crean correctamente?
-[x] Relaciones: ¿El user tiene el store_id correcto?
-
-
-### Phase 2: Core Features (Weeks 3-6)
-- [ ] User management and invitations
-- [ ] Inventory management system
-- [ ] Basic scanner integration
-- [ ] Sales processing module
-- [ ] Store configuration
+#### Sprint 1.1: Project Setup & Database (Week 1) ✅ COMPLETADO
+- [x] Project initialization (TypeScript, Node.js, React)
+- [x] Database schema design with multi-store relationships
+- [x] Development environment configuration
+- [x] Basic security middleware
+- [x] Documentation structure
 
 **Deliverables:**
-- Complete user management system
-- Functional inventory management
-- Basic scanner functionality
-- Sales processing capabilities
+- [x] Working development environment
+- [x] Database schema with multi-store support
+- [x] Basic Express server setup
+- [x] React frontend initialized
 
-### Phase 3: Integration & Polish (Weeks 7-8)
-- [ ] Payment integration (Stripe)
+
+#### Sprint 1.2: Authentication System (Week 2) ✅ COMPLETADO
+- [x] User registration and login (JWT-based)
+- [x] Owner account creation with first store
+- [x] Role-based access control (Owner, Employee)
+- [x] Password management and security
+- [x] Token refresh mechanism
+
+**Deliverables:**
+- [x] Complete authentication system
+- [x] User registration creates owner + initial store
+- [x] Login returns user with accessible stores
+- [x] Protected routes and middleware
+- [x] Store management API (CRUD completo)
+- [ ] Frontend authentication context (Pending - Sprint 1.3)
+
+#### Sprint 1.3: Multi-Store Core (Week 3) ✅ COMPLETADO
+- [x] Store creation and management for owners (Backend + Frontend ✅)
+- [x] Store switching mechanism (context/session) (Frontend ✅)
+- [x] User-Store relationships (many-to-many) (Backend ✅)
+- [x] Store selection UI (Frontend ✅)
+- [x] Store context provider (Frontend ✅)
+
+**Deliverables:**
+- [x] Owners can create multiple stores (Backend + Frontend ✅)
+- [x] Store switching without re-authentication
+- [x] Store context maintained across sessions
+- [x] UI for store management
+- [x] Store selector component
+
+**Phase 1 Completion Criteria:**
+- ✅ Owner can register and create account (Sprint 1.2)
+- ✅ First store is automatically created on registration (Sprint 1.2)
+- ✅ Owner can create additional stores via API and UI (Sprint 1.2 + 1.3)
+- ✅ Owner can switch between stores via UI (Sprint 1.3)
+- ✅ Authentication persists store context (Sprint 1.3)
+- ✅ Role-based access control working (Sprint 1.2)
+
+### Phase 2: Inventory & User Management (Weeks 4-6)
+**Goal:** Implement inventory management per store and user invitation system
+
+#### Sprint 2.1: Invitation System (Week 4)
+- [ ] Email invitation system for employees
+- [ ] Invitation links with store association
+- [ ] Employee acceptance and account creation
+- [ ] User-store assignment
+- [ ] Employee list per store
+
+**Deliverables:**
+- [ ] Owners can invite employees to specific stores
+- [ ] Employees can accept invitations
+- [ ] Employee dashboard shows assigned store only
+- [ ] User management UI per store
+
+#### Sprint 2.2: Inventory Management - Part 1 (Week 5)
+- [ ] Product model with store association
+- [ ] Product CRUD operations
+- [ ] Product list with search and filters
+- [ ] Stock tracking per store
+- [ ] Product categories
+
+**Deliverables:**
+- [ ] Products are store-specific
+- [ ] Full CRUD for products
+- [ ] Search and filter functionality
+- [ ] Basic stock management
+
+#### Sprint 2.3: Inventory Management - Part 2 (Week 6)
+- [ ] Low stock alerts per store
+- [ ] Bulk product import
+- [ ] Product validation rules
+- [ ] Stock adjustment history
+- [ ] Product images
+
+**Deliverables:**
+- [ ] Complete inventory management
+- [ ] Stock alerts working
+- [ ] Audit trail for changes
+- [ ] Product import functionality
+
+### Phase 3: Sales & Scanner Integration (Weeks 7-9)
+**Goal:** Implement sales processing with barcode scanning
+
+#### Sprint 3.1: Scanner Integration (Week 7)
+- [ ] QuaggaJS integration
+- [ ] Barcode scanning functionality
+- [ ] Manual product entry fallback
+- [ ] Product search by barcode
+- [ ] Scanner configuration per store
+
+**Deliverables:**
+- [ ] Working barcode scanner
+- [ ] Product lookup by barcode
+- [ ] Manual entry alternative
+- [ ] Scanner works on mobile/tablet
+
+#### Sprint 3.2: Sales Processing - Part 1 (Week 8)
+- [ ] Shopping cart functionality
+- [ ] Cart state management
+- [ ] Tax calculations per store
+- [ ] Payment method selection
+- [ ] Cash payment processing
+
+**Deliverables:**
+- [ ] Full shopping cart implementation
+- [ ] Store-specific tax rates
+- [ ] Cash payment flow
+- [ ] Cart persistence
+
+#### Sprint 3.3: Sales Processing - Part 2 (Week 9)
+- [ ] Stripe payment integration
+- [ ] Receipt generation (PDF)
+- [ ] Stock updates on sale
+- [ ] Sales history per store
+- [ ] Basic returns functionality
+
+**Deliverables:**
+- [ ] Complete sales processing
+- [ ] Payment gateway integration
 - [ ] Receipt generation
-- [ ] Error handling and validation
-- [ ] Security implementation
-- [ ] Testing and bug fixes
+- [ ] Automated stock updates
+
+### Phase 4: Store Configuration & Polish (Weeks 10-11)
+**Goal:** Store-specific settings and UI polish
+
+#### Sprint 4.1: Store Configuration (Week 10)
+- [ ] Store settings page
+- [ ] Currency and tax configuration
+- [ ] Store information (address, phone, etc.)
+- [ ] Alert threshold configuration
+- [ ] Store branding (logo, colors)
 
 **Deliverables:**
-- Payment processing system
-- Receipt generation
-- Comprehensive error handling
-- Security measures implemented
+- [ ] Complete store configuration
+- [ ] Per-store settings
+- [ ] Store branding options
 
-### Phase 4: Testing & Deployment (Weeks 9-10)
-- [ ] Unit testing
-- [ ] Integration testing
-- [ ] User acceptance testing
-- [ ] Performance optimization
-- [ ] Deployment setup
+#### Sprint 4.2: UI/UX Polish (Week 11)
+- [ ] Responsive design improvements
+- [ ] Loading states and animations
+- [ ] Error handling and user feedback
+- [ ] Dashboard with multi-store overview
+- [ ] Help documentation
 
 **Deliverables:**
-- Tested and optimized application
-- Production deployment ready
-- Documentation complete
+- [ ] Polished, professional UI
+- [ ] Excellent user experience
+- [ ] Comprehensive error handling
+- [ ] Multi-store dashboard
 
-## Current Sprint (Sprint 1 - Planning)
+### Phase 5: Testing & Deployment (Weeks 12-13)
+**Goal:** Comprehensive testing and production deployment
 
-### Backlog Items
-1. **Project Setup**
-   - [ ] Initialize repository structure
-   - [ ] Set up development environment
-   - [ ] Configure CI/CD pipeline
-   - [ ] Set up database
+#### Sprint 5.1: Testing (Week 12)
+- [ ] Unit tests for critical paths
+- [ ] Integration tests
+- [ ] E2E testing (multi-store flows)
+- [ ] Performance testing
+- [ ] Security audit
 
-2. **Authentication System**
-   - [ ] User registration (owners)
-   - [ ] Login system
-   - [ ] Password recovery
-   - [ ] Role-based access control
-   - [ ] JWT token management
+**Deliverables:**
+- [ ] Test coverage > 70%
+- [ ] All critical paths tested
+- [ ] Performance benchmarks met
+- [ ] Security vulnerabilities addressed
 
-3. **User Management**
-   - [ ] Invitation system
-   - [ ] User roles and permissions
-   - [ ] User profile management
-   - [ ] Store association
+#### Sprint 5.2: Deployment (Week 13)
+- [ ] Production environment setup
+- [ ] CI/CD pipeline
+- [ ] Database migrations
+- [ ] Monitoring and logging
+- [ ] Backup procedures
 
-4. **Inventory Management**
-   - [ ] Product registration
-   - [ ] Stock management
-   - [ ] Search and filtering
-   - [ ] Low stock alerts
-   - [ ] Product validation
+**Deliverables:**
+- [ ] Application deployed to production
+- [ ] Monitoring in place
+- [ ] Backup system working
+- [ ] Documentation complete
 
-5. **Sales System**
-   - [ ] Scanner integration
-   - [ ] Shopping cart
-   - [ ] Payment processing
-   - [ ] Receipt generation
-   - [ ] Stock updates
+## Data Model Changes for Multi-Store
 
-6. **Store Configuration**
-   - [ ] Store information setup
-   - [ ] Currency configuration
-   - [ ] Tax settings
-   - [ ] Alert thresholds
+### Core Entities
+
+#### Users
+```typescript
+interface User {
+  id: string;
+  email: string;
+  password_hash: string;
+  name: string;
+  role: 'owner' | 'employee';
+  created_at: Date;
+  updated_at: Date;
+}
+```
+
+#### Stores
+```typescript
+interface Store {
+  id: string;
+  owner_id: string; // References User.id
+  name: string;
+  address?: string;
+  phone?: string;
+  currency: string;
+  tax_rate: number;
+  low_stock_threshold: number;
+  created_at: Date;
+  updated_at: Date;
+}
+```
+
+#### UserStores (Many-to-Many Relationship)
+```typescript
+interface UserStore {
+  id: string;
+  user_id: string; // References User.id
+  store_id: string; // References Store.id
+  role: 'owner' | 'employee';
+  created_at: Date;
+}
+```
+
+### Key Relationships
+- **User ↔ Stores**: Many-to-Many through UserStores
+  - Owners can have multiple stores
+  - Employees can work at multiple stores (future)
+- **Store ↔ Products**: One-to-Many
+  - Each product belongs to one store
+- **Store ↔ Sales**: One-to-Many
+  - Each sale belongs to one store
+- **Store ↔ Invitations**: One-to-Many
+  - Invitations are store-specific
+
+## Current Sprint (Phase 1 Complete - Ready for Phase 2)
+
+### Sprint 1.1, 1.2 & 1.3 - ✅ COMPLETADOS
+
+#### Sprint 1.1 Tasks - ✅
+1. **Project Initialization** ✅
+   - [x] Initialize repository structure
+   - [x] Set up TypeScript configuration
+   - [x] Configure linting and formatting
+   - [x] Set up testing framework
+
+2. **Database Setup** ✅
+   - [x] Design multi-store schema
+   - [x] Create migration files
+   - [x] Set up Supabase connection
+   - [x] Create seed data
+
+3. **Backend Foundation** ✅
+   - [x] Express server setup
+   - [x] Middleware configuration
+   - [x] Error handling
+   - [x] Security headers
+
+4. **Frontend Foundation** ✅
+   - [x] Next.js/React setup
+   - [x] Tailwind CSS configuration
+   - [x] Routing setup
+   - [x] Basic layout components
+
+#### Sprint 1.2 Tasks - ✅
+1. **Authentication System** ✅
+   - [x] User registration with first store
+   - [x] Login with stores array
+   - [x] JWT token generation and validation
+   - [x] Password hashing with bcrypt
+   - [x] Token refresh mechanism
+
+2. **Store Management Backend** ✅
+   - [x] Store CRUD operations
+   - [x] Store access validation
+   - [x] Multi-store support
+   - [x] Store statistics
+   - [x] User-store relationships
+
+#### Sprint 1.3 Tasks - ✅
+1. **Frontend Authentication** ✅
+   - [x] AuthContext implementation
+   - [x] Login page
+   - [x] Register page
+   - [x] Protected routes
+
+2. **Frontend Store Management** ✅
+   - [x] StoreContext implementation
+   - [x] Store selector component
+   - [x] Store list page
+   - [x] Store management UI
+   - [x] Dashboard with stats
+
+### Active Tasks (Ready for Sprint 2.1)
+Phase 1 complete. Ready to start Phase 2: Inventory & User Management
 
 ## Risk Register
 
 | Risk | Impact | Probability | Mitigation |
 |------|--------|-------------|------------|
-| Payment integration complexity | High | Medium | Early integration testing, Stripe documentation review |
-| Scanner compatibility issues | Medium | High | Multiple scanner libraries, fallback manual entry |
-| Database performance with concurrent users | Medium | Medium | Database optimization, connection pooling |
-| Security vulnerabilities | High | Low | Security audits, penetration testing |
-| Mobile responsiveness issues | Medium | Medium | Mobile-first design, extensive testing |
+| Store context management complexity | High | Medium | Solid state management, thorough testing |
+| Data isolation between stores | High | Low | Database-level constraints, middleware checks |
+| Payment integration complexity | High | Medium | Early integration testing, Stripe documentation |
+| Scanner compatibility issues | Medium | High | Multiple libraries, fallback manual entry |
+| Multi-store UI complexity | Medium | Medium | Clear store indicators, easy switching |
+| Performance with multiple stores | Medium | Low | Proper indexing, query optimization |
 
-## Dependencies
+## Technical Decisions
 
-### External Dependencies
-- Stripe API for payment processing
-- Email service (SendGrid) for invitations
-- Cloud database service
-- Web hosting service
+### Frontend Stack
+- **Framework:** Next.js 14+ with App Router
+- **Language:** TypeScript (strict mode)
+- **Styling:** Tailwind CSS
+- **State Management:** React Context + custom hooks
+- **Forms:** React Hook Form + Zod validation
+- **HTTP Client:** Fetch API with custom wrapper
 
-### Internal Dependencies
-- UI/UX design completion
-- Database schema finalization
-- API endpoint specifications
-- Security requirements definition
+### Backend Stack
+- **Runtime:** Node.js 18+
+- **Framework:** Express.js with TypeScript
+- **Database:** PostgreSQL (via Supabase)
+- **Authentication:** JWT with httpOnly cookies
+- **Validation:** Zod or Joi
+- **Testing:** Jest + Supertest
 
-## Team Assignments
+### DevOps
+- **Hosting:** Vercel (Frontend) + Railway/Render (Backend)
+- **Database:** Supabase
+- **CI/CD:** GitHub Actions
+- **Monitoring:** Sentry for error tracking
 
-| Role | Responsibilities | Current Assignee |
-|------|------------------|------------------|
-| Project Manager | Overall project coordination, timeline management | [To be assigned] |
-| Backend Developer | API development, database design, authentication | [To be assigned] |
-| Frontend Developer | UI implementation, scanner integration, responsive design | [To be assigned] |
-| DevOps Engineer | Deployment, CI/CD, infrastructure | [To be assigned] |
-| QA Engineer | Testing, quality assurance, bug tracking | [To be assigned] |
+## Multi-Store User Flows
+
+### Owner Flow - Creating Second Store
+1. Owner logs in → Dashboard shows all stores
+2. Click "Add New Store" → Fill store details
+3. Store created → Can switch between stores
+4. Each store has independent inventory/sales
+5. Owner can invite different employees to each store
+
+### Owner Flow - Managing Multiple Stores
+1. Dashboard shows overview of all stores
+2. Store selector in header/sidebar
+3. Click store name → Switch context
+4. All data (products, sales, users) filtered by current store
+5. Visual indicator of current store always visible
+
+### Employee Flow - Single Store
+1. Employee logs in → Redirected to assigned store
+2. No store selector (only has access to one store)
+3. Can only view/edit data for assigned store
+4. Dashboard shows only assigned store data
 
 ## Progress Tracking
 
 ### Completed Tasks
-- [x] PRD documentation
-- [x] Project structure planning
-- [x] Technology stack selection
-- [x] **Phase 1: Foundation & Setup** - COMPLETED
-  - [x] Backend server setup with Express.js and TypeScript
-  - [x] Database models (User, Store, Product, Sale, Invitation)
-  - [x] Authentication system with JWT tokens
-  - [x] Database migrations and connection management
-  - [x] Security middleware and validation
-  - [x] React frontend with routing and authentication
-  - [x] Basic UI components and pages
-  - [x] Development environment configuration
+- [x] Project documentation with multi-store architecture (Sprint 1.1)
+- [x] Database schema design and migrations (Sprint 1.1)
+- [x] Backend models for User, Store, UserStore (Sprint 1.1)
+- [x] Authentication system with multi-store support (Sprint 1.2)
+- [x] Store management API (Sprint 1.2)
+- [x] JWT authentication middleware (Sprint 1.2)
+- [x] Store access validation middleware (Sprint 1.2)
+- [x] Password security with bcrypt (Sprint 1.2)
+- [x] User registration with first store creation (Sprint 1.2)
+- [x] Login with stores array (Sprint 1.2)
+- [x] CRUD endpoints for stores (Sprint 1.2)
+- [x] Frontend AuthContext with hooks (Sprint 1.3)
+- [x] Frontend StoreContext with hooks (Sprint 1.3)
+- [x] Login and Register pages (Sprint 1.3)
+- [x] Protected routes component (Sprint 1.3)
+- [x] Store selector component (Sprint 1.3)
+- [x] Dashboard page with stats (Sprint 1.3)
+- [x] Stores management page (Sprint 1.3)
+- [x] Complete API client (Sprint 1.3)
+- [x] TypeScript types for all entities (Sprint 1.3)
 
 ### In Progress
-- [ ] Project tracker creation
-- [ ] Developer guide documentation
-- [ ] Architecture design
+- [ ] Phase 2: Inventory & User Management (Sprint 2.1) 🚧 NEXT
 
 ### Blocked
 - None currently
 
-## Notes and Decisions
-
-### Technical Decisions
-- **Frontend:** React.js with Hooks, Tailwind CSS
-- **Backend:** Node.js/Express
-- **Database:** MongoDB or PostgreSQL
-- **Authentication:** JWT with Passport.js
-- **Scanner:** QuaggaJS
-- **Payments:** Stripe integration
-
-### Business Decisions
-- MVP scope limited to core features
-- Spanish language support initially
-- Mobile-first responsive design
-- Progressive Web App (PWA) approach
-
 ## Next Actions
-1. Complete project documentation
-2. Set up development environment
-3. Begin authentication system implementation
-4. Schedule team meetings for sprint planning
+1. ✅ Complete architecture documentation (Sprint 1.1)
+2. ✅ Set up development environment (Sprint 1.1)
+3. ✅ Create database schema and migrations (Sprint 1.1)
+4. ✅ Implement authentication system with multi-store support (Sprint 1.2)
+5. ✅ Implement store creation and management (Sprint 1.2)
+6. ✅ Implement frontend authentication and store management (Sprint 1.3)
+7. ⏭️ **NEXT: Sprint 2.1 - Invitation System**
+   - Backend invitation API
+   - Email integration
+   - Frontend invitation UI
+   - Employee management per store
 
 ---
 
-**Last Updated:** [Current Date]  
-**Next Review:** [Weekly]  
-**Status:** Active Development
-
+**Last Updated:** October 9, 2025  
+**Next Review:** Weekly  
+**Status:** Phase 1 ✅ COMPLETE (100%) - Ready for Phase 2  
+**Architecture:** Multi-Store from the start  
+**Current Sprint:** Ready for Sprint 2.1 - Invitation System  
+**Backend Status:** ✅ COMPLETE (Auth + Store Management + Database)  
+**Frontend Status:** ✅ COMPLETE (Auth + Store Management + UI)  
+**Phase 1:** ✅ COMPLETE - Foundation established successfully

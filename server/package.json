@@ -17,9 +17,12 @@
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
     "prestart": "npm run build",
+    "db:clean": "ts-node src/scripts/clean-database.ts",
+    "db:migrate": "ts-node src/scripts/run-migrations.ts",
+    "db:seed": "ts-node src/scripts/seed-database.ts",
+    "db:setup": "npm run db:migrate && npm run db:seed",
+    "db:reset": "npm run db:clean && npm run db:setup",
     "supabase:init": "ts-node src/scripts/init-supabase.ts",
-    "supabase:seed": "ts-node src/scripts/seed-supabase.ts",
-    "supabase:cleanup": "ts-node src/scripts/cleanup-supabase-auth.ts",
     "test:jwt": "ts-node src/scripts/test-jwt.ts"
   },
   "keywords": [

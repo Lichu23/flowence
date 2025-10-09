@@ -1,706 +1,720 @@
-# Flowence - Implementation Plan
+# Flowence - Implementation Plan (Multi-Store Architecture)
 
 ## Project Overview
-This document outlines the detailed implementation plan for Flowence, an all-in-one supermarket management web application. The plan is structured in phases to ensure systematic development and testing.
+This document outlines the detailed implementation plan for Flowence with **multi-store capability from the ground up**. Each owner can manage multiple stores with complete data isolation.
 
 ## Implementation Timeline
-**Total Duration:** 10 weeks  
-**Team Size:** 3-5 developers  
-**Methodology:** Agile with 2-week sprints  
+**Total Duration:** 13 weeks  
+**Team Size:** 1-3 developers  
+**Methodology:** Agile with weekly sprints  
+**Architecture:** Multi-store first approach  
 
-## Phase 1: Foundation & Setup (Weeks 1-2)
+---
 
-### Sprint 1.1: Project Initialization (Week 1)
+## Phase 1: Foundation & Multi-Store Setup (Weeks 1-3)
 
-#### Backend Setup
+### Sprint 1.1: Project Initialization & Database (Week 1)
+
+#### 📦 Backend Setup
 - [ ] Initialize Node.js project with TypeScript
-- [ ] Set up Express server with basic middleware
+- [ ] Set up Express server with security middleware
 - [ ] Configure ESLint, Prettier, and Jest
-- [ ] Set up environment configuration
-- [ ] Create basic folder structure
+- [ ] Set up environment configuration (.env)
+- [ ] Create folder structure following best practices
 
 **Deliverables:**
-- Working Express server
-- Development environment configured
-- Basic middleware stack
+- ✅ Express server running on port 3001
+- ✅ TypeScript compilation working
+- ✅ Basic middleware stack (CORS, helmet, morgan)
 
-#### Database Setup
-- [ ] Install and configure PostgreSQL
-- [ ] Create database schema with migrations
-- [ ] Set up connection pooling
-- [ ] Create seed data for development
-- [ ] Implement basic CRUD operations
-
-**Deliverables:**
-- Database schema defined
-- Migration system working
-- Seed data available
-
-#### Frontend Setup
-- [ ] Initialize React project with TypeScript
-- [ ] Configure Tailwind CSS
-- [ ] Set up React Router
-- [ ] Configure build tools (Vite/Webpack)
-- [ ] Create basic component structure
+#### 🗄️ Database Setup (Multi-Store Schema)
+- [ ] Set up Supabase project
+- [ ] Create migration system
+- [ ] Design multi-store schema
+  - users table
+  - stores table (with owner_id)
+  - user_stores junction table (many-to-many)
+  - products table (with store_id)
+  - sales table (with store_id)
+  - sale_items table
+  - invitations table (with store_id)
+- [ ] Set up database connection with Supabase
+- [ ] Create seed data for testing
 
 **Deliverables:**
-- React application running
-- Tailwind CSS configured
-- Basic routing setup
+- ✅ Database schema with multi-store support
+- ✅ Migration files created
+- ✅ Connection to Supabase working
+- ✅ Seed data with 1 owner, 2 stores, sample products
 
-### Sprint 1.2: Authentication Foundation (Week 2)
+**Migration Files:**
+```
+001_create_users.sql
+002_create_stores.sql
+003_create_user_stores.sql
+004_create_products.sql
+005_create_sales.sql
+006_create_sale_items.sql
+007_create_invitations.sql
+```
 
-#### Authentication System
-- [ ] Implement user registration endpoint
-- [ ] Create login/logout functionality
-- [ ] Set up JWT token generation and validation
-- [ ] Implement password hashing with bcrypt
+#### 🎨 Frontend Setup
+- [ ] Initialize Next.js 14+ project with TypeScript
+- [ ] Configure Tailwind CSS with custom theme
+- [ ] Set up app router structure
+- [ ] Configure environment variables
+- [ ] Create basic layout components
+
+**Deliverables:**
+- ✅ Next.js app running on port 3000
+- ✅ Tailwind CSS configured
+- ✅ Basic app router structure
+
+**Folder Structure:**
+```
+flowence-client/
+├── src/
+│   ├── app/
+│   │   ├── (auth)/
+│   │   │   ├── login/
+│   │   │   └── register/
+│   │   ├── (dashboard)/
+│   │   │   ├── dashboard/
+│   │   │   ├── stores/
+│   │   │   ├── products/
+│   │   │   └── sales/
+│   │   └── layout.tsx
+│   ├── components/
+│   ├── contexts/
+│   ├── hooks/
+│   ├── lib/
+│   └── types/
+```
+
+---
+
+### Sprint 1.2: Authentication System (Week 2)
+
+#### 🔐 Backend Authentication
+- [ ] Create User model with Supabase integration
+- [ ] Implement registration endpoint
+  - Create user in Supabase Auth
+  - Create user record in users table
+  - Create first store automatically
+  - Create user_stores relationship
+- [ ] Implement login endpoint
+  - Authenticate with Supabase
+  - Generate JWT token
+  - Return user data + accessible stores
 - [ ] Create authentication middleware
+- [ ] Implement token refresh endpoint
+- [ ] Create logout endpoint
 
 **Deliverables:**
-- Complete authentication API
-- JWT token management
-- Protected route middleware
+- ✅ POST /api/auth/register - Creates user + first store
+- ✅ POST /api/auth/login - Returns token + stores array
+- ✅ GET /api/auth/me - Returns current user + stores
+- ✅ POST /api/auth/refresh - Refreshes JWT token
+- ✅ POST /api/auth/logout - Invalidates token
+- ✅ Authentication middleware validates JWT
 
-#### Frontend Authentication
-- [ ] Create login/register forms
-- [ ] Implement authentication context
-- [ ] Set up protected routes
-- [ ] Create authentication hooks
-- [ ] Implement token storage
+**Key Files:**
+```
+server/src/
+├── controllers/AuthController.ts
+├── models/UserModel.ts
+├── middleware/auth.ts
+├── routes/auth.ts
+├── services/AuthService.ts
+└── types/user.ts
+```
 
-**Deliverables:**
-- Working login/register UI
-- Authentication state management
-- Protected route guards
-
-#### User Management
-- [ ] Create user model and controller
-- [ ] Implement role-based access control
-- [ ] Create user profile endpoints
-- [ ] Set up user validation schemas
-- [ ] Implement user update functionality
-
-**Deliverables:**
-- User management API
-- Role-based permissions
-- User profile management
-
-## Phase 2: Core Features (Weeks 3-6)
-
-### Sprint 2.1: Store & User Management (Week 3)
-
-#### Store Management
-- [ ] Create store model and controller
-- [ ] Implement store creation and configuration
-- [ ] Set up store-user relationships
-- [ ] Create store settings endpoints
-- [ ] Implement store validation
+#### 🎨 Frontend Authentication
+- [ ] Create AuthContext with user + stores state
+- [ ] Implement register page
+  - Email, password, name, store name
+  - Validation with Zod
+  - Error handling
+- [ ] Implement login page
+  - Email, password
+  - Remember me option
+  - Error handling
+- [ ] Create ProtectedRoute component
+- [ ] Implement token storage (httpOnly cookies)
+- [ ] Create useAuth hook
 
 **Deliverables:**
-- Store management API
-- Store configuration system
-- Store-user associations
+- ✅ Registration flow complete
+- ✅ Login flow complete
+- ✅ Protected routes working
+- ✅ Session persistence
+- ✅ Logout functionality
 
-#### Invitation System
-- [ ] Implement invitation email service (SendGrid)
+**Key Files:**
+```
+flowence-client/src/
+├── contexts/AuthContext.tsx
+├── app/(auth)/login/page.tsx
+├── app/(auth)/register/page.tsx
+├── components/auth/ProtectedRoute.tsx
+└── hooks/useAuth.ts
+```
+
+---
+
+### Sprint 1.3: Multi-Store Core Implementation (Week 3)
+
+#### 🏪 Backend Store Management
+- [ ] Create Store model
+- [ ] Create UserStore model (junction table)
+- [ ] Implement store CRUD endpoints
+  - GET /api/stores - Get all user's stores
+  - POST /api/stores - Create new store (owners only)
+  - GET /api/stores/:id - Get store details
+  - PUT /api/stores/:id - Update store
+  - DELETE /api/stores/:id - Delete store
+- [ ] Create store access middleware
+- [ ] Implement store ownership validation
+
+**Deliverables:**
+- ✅ Complete store management API
+- ✅ Store access validation middleware
+- ✅ Owner can create multiple stores
+- ✅ User-store relationships working
+
+**Key Files:**
+```
+server/src/
+├── controllers/StoreController.ts
+├── models/StoreModel.ts
+├── models/UserStoreModel.ts
+├── middleware/storeAccess.ts
+└── routes/stores.ts
+```
+
+#### 🎨 Frontend Store Management
+- [ ] Create StoreContext for current store state
+- [ ] Implement store selector component
+- [ ] Create stores management page (for owners)
+- [ ] Implement store creation form
+- [ ] Create store settings page
+- [ ] Implement store switching functionality
+- [ ] Add store persistence (localStorage)
+
+**Deliverables:**
+- ✅ StoreContext managing current store
+- ✅ Store selector in header
+- ✅ Store creation flow
+- ✅ Store switching without re-login
+- ✅ Current store persisted across sessions
+- ✅ Visual indicator of current store
+
+**Key Files:**
+```
+flowence-client/src/
+├── contexts/StoreContext.tsx
+├── app/(dashboard)/stores/page.tsx
+├── app/(dashboard)/stores/new/page.tsx
+├── components/layout/StoreSelector.tsx
+├── components/stores/StoreCard.tsx
+└── hooks/useStore.ts
+```
+
+#### 🧪 Testing Phase 1
+- [ ] Test user registration creates first store
+- [ ] Test owner can create additional stores
+- [ ] Test store switching updates context
+- [ ] Test employees only see assigned store
+- [ ] Test store access validation
+
+**Phase 1 Acceptance Criteria:**
+- ✅ Owner can register and auto-create first store
+- ✅ Owner can create unlimited additional stores
+- ✅ Owner can switch between stores seamlessly
+- ✅ Current store context maintained
+- ✅ Store name visible in UI at all times
+- ✅ Authentication persists across page refreshes
+
+---
+
+## Phase 2: Inventory & User Management (Weeks 4-6)
+
+### Sprint 2.1: Invitation System (Week 4)
+
+#### 📧 Backend Invitation System
+- [ ] Create Invitation model (with store_id)
+- [ ] Implement invitation creation endpoint
+- [ ] Set up email service (SendGrid)
 - [ ] Create invitation token generation
-- [ ] Set up invitation acceptance flow
-- [ ] Create invitation management endpoints
-- [ ] Implement invitation expiration
+- [ ] Implement invitation acceptance endpoint
+- [ ] Create invitation expiration logic (24 hours)
+- [ ] Add invitation status tracking
 
 **Deliverables:**
-- Email invitation system
-- Invitation management API
-- User onboarding flow
+- ✅ POST /api/invitations - Create invitation for store
+- ✅ GET /api/invitations/:token - Get invitation details
+- ✅ POST /api/invitations/:token/accept - Accept invitation
+- ✅ GET /api/stores/:id/invitations - List store invitations
+- ✅ Email sent with invitation link
+- ✅ Invitation expires after 24 hours
 
-#### Frontend Store Management
-- [ ] Create store setup wizard
-- [ ] Implement invitation sending interface
-- [ ] Create user management dashboard
-- [ ] Set up store settings page
-- [ ] Implement role-based UI components
-
-**Deliverables:**
-- Store setup interface
-- User management UI
-- Settings configuration page
-
-### Sprint 2.2: Inventory Management (Week 4)
-
-#### Product Management Backend
-- [ ] Create product model and controller
-- [ ] Implement product CRUD operations
-- [ ] Set up barcode validation
-- [ ] Create product search and filtering
-- [ ] Implement stock validation
+#### 👥 User Management per Store
+- [ ] Implement user list endpoint (per store)
+- [ ] Create user role update endpoint
+- [ ] Implement user removal from store
+- [ ] Add user access validation
 
 **Deliverables:**
-- Product management API
-- Barcode validation system
-- Product search functionality
+- ✅ GET /api/stores/:id/users - List store employees
+- ✅ PUT /api/stores/:id/users/:user_id - Update role
+- ✅ DELETE /api/stores/:id/users/:user_id - Remove user
+- ✅ Only owners can manage users
 
-#### Inventory Operations
-- [ ] Implement stock updates
-- [ ] Create low stock alerts
-- [ ] Set up inventory validation
-- [ ] Implement bulk operations
-- [ ] Create inventory audit trail
-
-**Deliverables:**
-- Stock management system
-- Alert notification system
-- Audit logging
-
-#### Frontend Inventory
-- [ ] Create product registration form
-- [ ] Implement product list with pagination
-- [ ] Set up product search and filters
-- [ ] Create product edit interface
-- [ ] Implement stock management UI
+#### 🎨 Frontend Invitation UI
+- [ ] Create user management page per store
+- [ ] Implement invitation form
+- [ ] Create pending invitations list
+- [ ] Implement invitation acceptance page
+- [ ] Add user list with roles
+- [ ] Create user removal confirmation
 
 **Deliverables:**
-- Product management interface
-- Inventory dashboard
-- Stock management UI
+- ✅ User management UI per store
+- ✅ Invitation sending interface
+- ✅ Invitation acceptance flow
+- ✅ User role management
 
-### Sprint 2.3: Barcode Scanner Integration (Week 5)
+---
 
-#### Scanner Implementation
-- [ ] Integrate QuaggaJS library
-- [ ] Implement camera access and permissions
-- [ ] Create barcode scanning interface
-- [ ] Set up scanner error handling
-- [ ] Implement manual barcode entry
+### Sprint 2.2: Inventory Management - Part 1 (Week 5)
 
-**Deliverables:**
-- Working barcode scanner
-- Camera integration
-- Manual entry fallback
-
-#### Scanner Integration
-- [ ] Connect scanner to product lookup
-- [ ] Implement product creation from scanner
-- [ ] Set up scanner in sales interface
-- [ ] Create scanner configuration
-- [ ] Implement scanner testing
+#### 📦 Backend Product Management
+- [ ] Create Product model (with store_id)
+- [ ] Implement product CRUD endpoints
+  - GET /api/products?store_id={id}
+  - POST /api/products
+  - GET /api/products/:id
+  - PUT /api/products/:id
+  - DELETE /api/products/:id
+- [ ] Add product validation (unique barcode per store)
+- [ ] Implement product search and filtering
+- [ ] Create product categories
 
 **Deliverables:**
-- Scanner-product integration
-- Product creation from barcode
-- Scanner configuration
+- ✅ Complete product API with store context
+- ✅ Products are store-specific
+- ✅ Barcode unique per store (not globally)
+- ✅ Search and filter functionality
 
-#### Frontend Scanner UI
-- [ ] Create scanner component
-- [ ] Implement scanner overlay
-- [ ] Set up scanner feedback
-- [ ] Create scanner settings
-- [ ] Implement scanner troubleshooting
-
-**Deliverables:**
-- Scanner user interface
-- Scanner feedback system
-- Scanner settings page
-
-### Sprint 2.4: Sales System Foundation (Week 6)
-
-#### Sales Backend
-- [ ] Create sales model and controller
-- [ ] Implement shopping cart functionality
-- [ ] Set up sales validation
-- [ ] Create sales calculation logic
-- [ ] Implement sales audit trail
-
-**Deliverables:**
-- Sales management API
-- Shopping cart system
-- Sales calculation engine
-
-#### Payment Integration
-- [ ] Integrate Stripe payment processing
-- [ ] Implement payment validation
-- [ ] Set up payment error handling
-- [ ] Create payment confirmation
-- [ ] Implement refund functionality
-
-**Deliverables:**
-- Stripe integration
-- Payment processing system
-- Refund handling
-
-#### Frontend Sales Interface
-- [ ] Create sales dashboard
-- [ ] Implement shopping cart UI
-- [ ] Set up payment selection
-- [ ] Create sales confirmation
-- [ ] Implement sales history
-
-**Deliverables:**
-- Sales interface
-- Payment selection UI
-- Sales history display
-
-## Phase 3: Integration & Polish (Weeks 7-8)
-
-### Sprint 3.1: Payment & Receipt System (Week 7)
-
-#### Payment Processing
-- [ ] Complete Stripe integration
-- [ ] Implement payment confirmation
-- [ ] Set up payment error handling
-- [ ] Create payment status tracking
-- [ ] Implement payment retry logic
-
-**Deliverables:**
-- Complete payment system
-- Payment error handling
-- Payment status tracking
-
-#### Receipt Generation
-- [ ] Implement PDF receipt generation
-- [ ] Create receipt templates
-- [ ] Set up receipt customization
-- [ ] Implement receipt printing
-- [ ] Create receipt email functionality
-
-**Deliverables:**
-- PDF receipt system
-- Receipt customization
-- Receipt printing capability
-
-#### Sales Completion
-- [ ] Implement stock updates on sale completion
-- [ ] Set up sales confirmation flow
-- [ ] Create sales error handling
-- [ ] Implement sales rollback
-- [ ] Set up sales notifications
-
-**Deliverables:**
-- Complete sales flow
-- Stock update automation
-- Sales error handling
-
-### Sprint 3.2: Error Handling & Validation (Week 8)
-
-#### Comprehensive Error Handling
-- [ ] Implement global error handling
-- [ ] Set up error logging system
-- [ ] Create error recovery mechanisms
-- [ ] Implement user-friendly error messages
-- [ ] Set up error monitoring
-
-**Deliverables:**
-- Global error handling
-- Error logging system
-- Error recovery mechanisms
-
-#### Data Validation
-- [ ] Implement comprehensive input validation
-- [ ] Set up data sanitization
-- [ ] Create validation schemas
-- [ ] Implement client-side validation
-- [ ] Set up validation error handling
-
-**Deliverables:**
-- Complete validation system
-- Data sanitization
-- Validation error handling
-
-#### Security Implementation
-- [ ] Implement security headers
-- [ ] Set up CSRF protection
-- [ ] Create rate limiting
-- [ ] Implement input sanitization
-- [ ] Set up security monitoring
-
-**Deliverables:**
-- Security implementation
-- Rate limiting
-- Security monitoring
-
-## Phase 4: Testing & Deployment (Weeks 9-10)
-
-### Sprint 4.1: Testing & Quality Assurance (Week 9)
-
-#### Unit Testing
-- [ ] Write unit tests for all services
-- [ ] Create component tests for React
-- [ ] Set up test coverage reporting
-- [ ] Implement test automation
-- [ ] Create test data fixtures
-
-**Deliverables:**
-- Comprehensive unit tests
-- Test coverage reports
-- Test automation
-
-#### Integration Testing
-- [ ] Create API integration tests
-- [ ] Set up database testing
-- [ ] Implement payment testing
-- [ ] Create email service testing
-- [ ] Set up scanner testing
-
-**Deliverables:**
-- Integration test suite
-- API testing
-- Payment testing
-
-#### End-to-End Testing
-- [ ] Set up Cypress E2E tests
-- [ ] Create user journey tests
-- [ ] Implement cross-browser testing
-- [ ] Set up mobile testing
-- [ ] Create performance tests
-
-**Deliverables:**
-- E2E test suite
-- Cross-browser testing
-- Performance testing
-
-### Sprint 4.2: Deployment & Launch (Week 10)
-
-#### Production Setup
-- [ ] Set up production database
-- [ ] Configure production environment
-- [ ] Set up SSL certificates
-- [ ] Configure reverse proxy
-- [ ] Set up monitoring and logging
-
-**Deliverables:**
-- Production environment
-- SSL configuration
-- Monitoring setup
-
-#### Deployment Pipeline
-- [ ] Set up CI/CD pipeline
-- [ ] Configure automated testing
-- [ ] Set up deployment automation
-- [ ] Create rollback procedures
-- [ ] Set up backup systems
-
-**Deliverables:**
-- CI/CD pipeline
-- Deployment automation
-- Backup systems
-
-#### Launch Preparation
-- [ ] Create user documentation
-- [ ] Set up support systems
-- [ ] Prepare launch materials
-- [ ] Conduct final testing
-- [ ] Set up user onboarding
-
-**Deliverables:**
-- User documentation
-- Support systems
-- Launch readiness
-
-## Technical Implementation Details
-
-### Database Schema Implementation
-
-#### Phase 1: Core Tables
-```sql
--- Users table
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL CHECK (role IN ('owner', 'employee')),
-  store_id UUID REFERENCES stores(id),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Stores table
-CREATE TABLE stores (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
-  address TEXT,
-  phone VARCHAR(50),
-  currency VARCHAR(3) DEFAULT 'USD',
-  tax_rate DECIMAL(5,2) DEFAULT 0.00,
-  low_stock_threshold INTEGER DEFAULT 5,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-#### Phase 2: Product Tables
-```sql
--- Products table
-CREATE TABLE products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_id UUID REFERENCES stores(id),
-  name VARCHAR(255) NOT NULL,
-  barcode VARCHAR(255) UNIQUE,
-  price DECIMAL(10,2) NOT NULL,
-  cost DECIMAL(10,2) NOT NULL,
-  stock INTEGER NOT NULL DEFAULT 0,
-  category VARCHAR(100),
-  description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-#### Phase 3: Sales Tables
-```sql
--- Sales table
-CREATE TABLE sales (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_id UUID REFERENCES stores(id),
-  user_id UUID REFERENCES users(id),
-  total_amount DECIMAL(10,2) NOT NULL,
-  tax_amount DECIMAL(10,2) NOT NULL,
-  payment_method VARCHAR(50) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Sale items table
-CREATE TABLE sale_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sale_id UUID REFERENCES sales(id),
-  product_id UUID REFERENCES products(id),
-  quantity INTEGER NOT NULL,
-  unit_price DECIMAL(10,2) NOT NULL,
-  total_price DECIMAL(10,2) NOT NULL
-);
-```
-
-### API Endpoint Implementation
-
-#### Authentication Endpoints
+**Key Fields:**
 ```typescript
-// POST /api/auth/register
-interface RegisterRequest {
-  email: string;
-  password: string;
+interface Product {
+  id: string;
+  store_id: string; // ⭐ Store association
   name: string;
-  storeName: string;
-}
-
-// POST /api/auth/login
-interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-// POST /api/auth/refresh
-interface RefreshRequest {
-  refreshToken: string;
-}
-```
-
-#### Product Endpoints
-```typescript
-// GET /api/products
-interface ProductsResponse {
-  products: Product[];
-  pagination: PaginationInfo;
-}
-
-// POST /api/products
-interface CreateProductRequest {
-  name: string;
-  barcode?: string;
+  barcode: string;
   price: number;
   cost: number;
   stock: number;
   category?: string;
   description?: string;
-}
-
-// PUT /api/products/:id
-interface UpdateProductRequest {
-  name?: string;
-  barcode?: string;
-  price?: number;
-  cost?: number;
-  stock?: number;
-  category?: string;
-  description?: string;
+  created_at: Date;
+  updated_at: Date;
 }
 ```
 
-#### Sales Endpoints
-```typescript
-// POST /api/sales
-interface CreateSaleRequest {
-  items: SaleItem[];
-  paymentMethod: 'cash' | 'card';
-  amountReceived?: number;
-}
+#### 🎨 Frontend Product Management
+- [ ] Create products page (filtered by current store)
+- [ ] Implement product creation form
+- [ ] Create product list with pagination
+- [ ] Add product search and filters
+- [ ] Implement product editing
+- [ ] Create product deletion confirmation
 
-interface SaleItem {
-  productId: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-// GET /api/sales
-interface SalesResponse {
-  sales: Sale[];
-  pagination: PaginationInfo;
-}
-```
-
-### Frontend Component Structure
-
-#### Authentication Components
-```typescript
-// components/auth/LoginForm.tsx
-interface LoginFormProps {
-  onLogin: (credentials: LoginCredentials) => Promise<void>;
-  isLoading: boolean;
-  error?: string;
-}
-
-// components/auth/RegisterForm.tsx
-interface RegisterFormProps {
-  onRegister: (userData: RegisterData) => Promise<void>;
-  isLoading: boolean;
-  error?: string;
-}
-
-// components/auth/ProtectedRoute.tsx
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  requiredRole?: 'owner' | 'employee';
-}
-```
-
-#### Product Components
-```typescript
-// components/inventory/ProductForm.tsx
-interface ProductFormProps {
-  product?: Product;
-  onSubmit: (product: CreateProductRequest) => Promise<void>;
-  onCancel: () => void;
-  isLoading: boolean;
-}
-
-// components/inventory/ProductList.tsx
-interface ProductListProps {
-  products: Product[];
-  onEdit: (product: Product) => void;
-  onDelete: (productId: string) => void;
-  onSearch: (query: string) => void;
-  isLoading: boolean;
-}
-
-// components/inventory/ProductCard.tsx
-interface ProductCardProps {
-  product: Product;
-  onEdit: (product: Product) => void;
-  onDelete: (productId: string) => void;
-  onUpdateStock: (productId: string, newStock: number) => void;
-}
-```
-
-#### Sales Components
-```typescript
-// components/sales/SalesDashboard.tsx
-interface SalesDashboardProps {
-  onStartNewSale: () => void;
-  recentSales: Sale[];
-  onViewSale: (saleId: string) => void;
-}
-
-// components/sales/ShoppingCart.tsx
-interface ShoppingCartProps {
-  items: CartItem[];
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemoveItem: (productId: string) => void;
-  onCheckout: () => void;
-  total: number;
-}
-
-// components/sales/BarcodeScanner.tsx
-interface BarcodeScannerProps {
-  onScan: (barcode: string) => void;
-  onError: (error: string) => void;
-  isActive: boolean;
-}
-```
-
-## Quality Assurance Plan
-
-### Testing Strategy
-1. **Unit Testing:** Jest for backend services and React components
-2. **Integration Testing:** API endpoint testing with supertest
-3. **End-to-End Testing:** Cypress for complete user journeys
-4. **Performance Testing:** Load testing with Artillery
-5. **Security Testing:** OWASP ZAP for security vulnerabilities
-
-### Code Quality
-- ESLint and Prettier for code formatting
-- TypeScript strict mode for type safety
-- Husky for pre-commit hooks
-- SonarQube for code quality analysis
-- 80%+ test coverage requirement
-
-### Performance Requirements
-- Page load time < 3 seconds
-- API response time < 2 seconds
-- Database query optimization
-- Image optimization and compression
-- CDN for static assets
-
-## Risk Management
-
-### Technical Risks
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Payment integration complexity | Medium | High | Early integration, Stripe documentation review |
-| Scanner compatibility issues | High | Medium | Multiple scanner libraries, fallback options |
-| Database performance | Medium | Medium | Proper indexing, query optimization |
-| Security vulnerabilities | Low | High | Security audits, penetration testing |
-
-### Business Risks
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| User adoption challenges | Medium | High | User testing, feedback incorporation |
-| Feature scope creep | High | Medium | Strict MVP scope, change control |
-| Resource constraints | Medium | High | Regular sprint reviews, resource planning |
-
-## Success Metrics
-
-### Technical Metrics
-- 99% uptime
-- < 2 second API response time
-- < 3 second page load time
-- 80%+ test coverage
-- Zero critical security vulnerabilities
-
-### Business Metrics
-- 10+ beta users in first month
-- 80% of sales processed without errors
-- NPS score > 7/10
-- < 5 minute onboarding time
-- < 1 minute sale processing time
-
-## Post-MVP Roadmap
-
-### Phase 5: Advanced Features (Weeks 11-14)
-- Advanced reporting and analytics
-- Multi-store management
-- Supplier integration
-- Inventory forecasting
-- Advanced user permissions
-
-### Phase 6: Scale & Optimize (Weeks 15-18)
-- Performance optimization
-- Mobile app development
-- API for third-party integrations
-- Advanced security features
-- Internationalization
+**Deliverables:**
+- ✅ Full product CRUD interface
+- ✅ Products filtered by current store
+- ✅ Search and filter working
+- ✅ Responsive design for tablet use
 
 ---
 
-**Last Updated:** [Current Date]  
-**Version:** 1.0  
-**Project Manager:** [To be assigned]
+### Sprint 2.3: Inventory Management - Part 2 (Week 6)
 
+#### 📊 Stock Management
+- [ ] Implement stock adjustment endpoint
+- [ ] Create low stock alerts (per store)
+- [ ] Add stock history tracking
+- [ ] Implement bulk stock updates
+- [ ] Create stock validation on sales
+
+**Deliverables:**
+- ✅ Stock adjustments working
+- ✅ Low stock alerts per store
+- ✅ Stock history audit trail
+- ✅ Bulk operations supported
+
+#### 🎨 Frontend Stock Management
+- [ ] Create stock adjustment interface
+- [ ] Implement low stock alert display
+- [ ] Add stock history view
+- [ ] Create bulk import functionality
+- [ ] Implement product categories
+
+**Deliverables:**
+- ✅ Complete inventory management
+- ✅ Stock alerts visible
+- ✅ Bulk operations UI
+- ✅ Category management
+
+---
+
+## Phase 3: Sales & Scanner Integration (Weeks 7-9)
+
+### Sprint 3.1: Barcode Scanner (Week 7)
+
+#### 📷 Scanner Integration
+- [ ] Integrate QuaggaJS library
+- [ ] Implement camera access
+- [ ] Create scanner component
+- [ ] Add barcode detection
+- [ ] Implement manual entry fallback
+- [ ] Create scanner error handling
+
+**Deliverables:**
+- ✅ Barcode scanner working
+- ✅ Camera permissions handled
+- ✅ Manual entry as fallback
+- ✅ Works on mobile and tablet
+
+#### 🔍 Product Lookup
+- [ ] Implement product search by barcode (current store)
+- [ ] Add product not found handling
+- [ ] Create quick add product from scanner
+- [ ] Implement product preview
+
+**Deliverables:**
+- ✅ Scanner finds products in current store only
+- ✅ Option to create product if not found
+- ✅ Product preview after scan
+
+---
+
+### Sprint 3.2: Sales Processing - Part 1 (Week 8)
+
+#### 🛒 Shopping Cart Backend
+- [ ] Create Sale model (with store_id)
+- [ ] Create SaleItem model
+- [ ] Implement cart validation
+- [ ] Add stock availability check
+- [ ] Create tax calculation logic
+
+**Deliverables:**
+- ✅ Sale data model with store context
+- ✅ Stock validation before sale
+- ✅ Tax calculation per store settings
+
+#### 🎨 Shopping Cart Frontend
+- [ ] Create cart context
+- [ ] Implement cart component
+- [ ] Add item quantity controls
+- [ ] Create cart summary
+- [ ] Implement cart persistence
+- [ ] Add cart validation
+
+**Deliverables:**
+- ✅ Full shopping cart functionality
+- ✅ Real-time totals calculation
+- ✅ Cart state management
+- ✅ Stock validation
+
+---
+
+### Sprint 3.3: Sales Processing - Part 2 (Week 9)
+
+#### 💳 Payment Processing
+- [ ] Implement cash payment endpoint
+- [ ] Integrate Stripe for card payments
+- [ ] Create payment validation
+- [ ] Implement receipt generation (PDF)
+- [ ] Add sales history endpoint
+- [ ] Create stock update on sale
+
+**Deliverables:**
+- ✅ POST /api/sales - Process sale (cash/card)
+- ✅ GET /api/sales?store_id={id} - Sales history
+- ✅ GET /api/sales/:id/receipt - Download receipt
+- ✅ Stock auto-updates on completed sale
+- ✅ Sales recorded with store_id
+
+#### 🎨 Payment & Receipt UI
+- [ ] Create checkout interface
+- [ ] Implement payment method selection
+- [ ] Add Stripe card input
+- [ ] Create receipt display
+- [ ] Implement receipt download/print
+- [ ] Add sales history page
+
+**Deliverables:**
+- ✅ Complete checkout flow
+- ✅ Payment processing UI
+- ✅ Receipt generation
+- ✅ Sales history per store
+
+#### ↩️ Returns Functionality
+- [ ] Implement sale return endpoint
+- [ ] Add stock restoration
+- [ ] Create return validation
+- [ ] Implement return history
+
+**Deliverables:**
+- ✅ Basic return functionality
+- ✅ Stock restored on return
+- ✅ Return audit trail
+
+---
+
+## Phase 4: Store Configuration & Polish (Weeks 10-11)
+
+### Sprint 4.1: Store Configuration (Week 10)
+
+#### ⚙️ Store Settings
+- [ ] Implement store configuration endpoints
+- [ ] Add currency settings
+- [ ] Create tax rate configuration
+- [ ] Implement alert threshold settings
+- [ ] Add store branding (logo upload)
+
+**Deliverables:**
+- ✅ Complete store settings API
+- ✅ Per-store configuration
+- ✅ Settings validation
+
+#### 🎨 Settings UI
+- [ ] Create settings page per store
+- [ ] Implement settings forms
+- [ ] Add image upload for logo
+- [ ] Create settings preview
+- [ ] Implement settings validation
+
+**Deliverables:**
+- ✅ Store settings interface
+- ✅ Logo upload working
+- ✅ Settings persist per store
+
+---
+
+### Sprint 4.2: Dashboard & Polish (Week 11)
+
+#### 📊 Multi-Store Dashboard
+- [ ] Create dashboard overview for owners
+- [ ] Show metrics for all stores
+- [ ] Implement store comparison
+- [ ] Add recent activity feed
+- [ ] Create quick actions
+
+**Deliverables:**
+- ✅ Owner sees all stores overview
+- ✅ Key metrics per store
+- ✅ Quick store switching
+
+#### 🎨 UI/UX Polish
+- [ ] Improve responsive design
+- [ ] Add loading states
+- [ ] Implement error boundaries
+- [ ] Create empty states
+- [ ] Add tooltips and help text
+- [ ] Implement animations
+
+**Deliverables:**
+- ✅ Professional, polished UI
+- ✅ Excellent mobile experience
+- ✅ Consistent design system
+- ✅ Accessibility improvements
+
+---
+
+## Phase 5: Testing & Deployment (Weeks 12-13)
+
+### Sprint 5.1: Testing (Week 12)
+
+#### 🧪 Backend Testing
+- [ ] Unit tests for models
+- [ ] Controller tests
+- [ ] Integration tests for API
+- [ ] Multi-store isolation tests
+- [ ] Authentication tests
+- [ ] Store access validation tests
+
+**Target Coverage:** 70%+
+
+#### 🧪 Frontend Testing
+- [ ] Component tests
+- [ ] Context tests
+- [ ] Hook tests
+- [ ] E2E tests with Playwright
+- [ ] Multi-store flow tests
+
+**Test Scenarios:**
+- Owner creates multiple stores
+- Owner switches between stores
+- Employee only sees assigned store
+- Data isolation between stores
+- Complete sales flow per store
+
+#### 🔒 Security Audit
+- [ ] SQL injection testing
+- [ ] XSS vulnerability testing
+- [ ] Authentication security review
+- [ ] Store access control testing
+- [ ] Data isolation verification
+
+**Deliverables:**
+- ✅ All critical paths tested
+- ✅ Security vulnerabilities addressed
+- ✅ Multi-store scenarios validated
+
+---
+
+### Sprint 5.2: Deployment (Week 13)
+
+#### 🚀 Production Setup
+- [ ] Set up production database (Supabase)
+- [ ] Configure production environment
+- [ ] Set up CI/CD pipeline (GitHub Actions)
+- [ ] Configure error monitoring (Sentry)
+- [ ] Set up logging system
+- [ ] Implement backup strategy
+
+**Deliverables:**
+- ✅ Production environment ready
+- ✅ CI/CD pipeline working
+- ✅ Monitoring in place
+
+#### 📚 Documentation
+- [ ] API documentation
+- [ ] User guide
+- [ ] Admin guide for store management
+- [ ] Developer documentation
+- [ ] Deployment guide
+
+**Deliverables:**
+- ✅ Complete documentation
+- ✅ User onboarding guide
+- ✅ Admin documentation
+
+#### 🎉 Launch
+- [ ] Beta user testing
+- [ ] Bug fixes from testing
+- [ ] Performance optimization
+- [ ] Final security review
+- [ ] Production deployment
+
+**Launch Checklist:**
+- ✅ All features working
+- ✅ Tests passing
+- ✅ Documentation complete
+- ✅ Monitoring active
+- ✅ Backup system working
+
+---
+
+## Technical Stack Summary
+
+### Frontend
+- **Framework:** Next.js 14+ (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **State:** React Context
+- **Forms:** React Hook Form + Zod
+- **Scanner:** QuaggaJS
+- **HTTP:** Fetch API
+
+### Backend
+- **Runtime:** Node.js 18+
+- **Framework:** Express.js
+- **Language:** TypeScript
+- **Database:** PostgreSQL (Supabase)
+- **Auth:** JWT + Supabase Auth
+- **Validation:** Zod
+- **Payments:** Stripe
+- **Email:** SendGrid
+- **Testing:** Jest + Supertest
+
+### DevOps
+- **Frontend Host:** Vercel
+- **Backend Host:** Railway/Render
+- **Database:** Supabase
+- **CI/CD:** GitHub Actions
+- **Monitoring:** Sentry
+- **Logs:** Winston
+
+---
+
+## Success Criteria
+
+### Phase 1 Complete ✅
+- [ ] Owner can register with first store
+- [ ] Owner can create additional stores
+- [ ] Owner can switch between stores
+- [ ] Store context maintained across app
+- [ ] Authentication working properly
+
+### Phase 2 Complete ✅
+- [ ] Invitation system working per store
+- [ ] Full inventory management per store
+- [ ] Products isolated by store
+- [ ] User management per store
+
+### Phase 3 Complete ✅
+- [ ] Barcode scanner working
+- [ ] Complete sales processing
+- [ ] Payment integration
+- [ ] Receipt generation
+- [ ] Stock updates automatic
+
+### Phase 4 Complete ✅
+- [ ] Store configuration system
+- [ ] Multi-store dashboard
+- [ ] Polished UI/UX
+- [ ] Mobile responsive
+
+### Phase 5 Complete ✅
+- [ ] Tests passing (70%+ coverage)
+- [ ] Production deployed
+- [ ] Documentation complete
+- [ ] Monitoring active
+
+---
+
+## Multi-Store Specific Considerations
+
+### Data Isolation
+- Every query includes store_id filter
+- Database constraints enforce isolation
+- Middleware validates store access
+- Visual indicators of current store
+
+### Performance
+- Indexes on store_id columns
+- Efficient store switching
+- Cached store settings
+- Optimized queries
+
+### User Experience
+- Clear current store indicator
+- Easy store switching
+- Store-specific dashboards
+- Multi-store overview for owners
+
+### Security
+- Store access validation at every endpoint
+- Role verification per store
+- Data isolation at database level
+- Audit logs include store context
+
+---
+
+**Last Updated:** October 9, 2025  
+**Version:** 1.0 - Multi-Store Implementation  
+**Status:** Ready to Start Phase 1

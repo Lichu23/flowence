@@ -1,461 +1,688 @@
-# Flowence - System Architecture
+# Flowence - System Architecture (Multi-Store Edition)
 
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)
-2. [System Components](#system-components)
-3. [Data Flow](#data-flow)
-4. [Security Architecture](#security-architecture)
-5. [Scalability Considerations](#scalability-considerations)
-6. [Technology Decisions](#technology-decisions)
-7. [Database Design](#database-design)
-8. [API Design](#api-design)
-9. [Frontend Architecture](#frontend-architecture)
-10. [Deployment Architecture](#deployment-architecture)
+2. [Multi-Store Architecture](#multi-store-architecture)
+3. [System Components](#system-components)
+4. [Data Flow](#data-flow)
+5. [Security Architecture](#security-architecture)
+6. [Database Design](#database-design)
+7. [API Design](#api-design)
+8. [Frontend Architecture](#frontend-architecture)
+9. [Store Context Management](#store-context-management)
+10. [Scalability Considerations](#scalability-considerations)
 
 ## Architecture Overview
 
-Flowence follows a modern, scalable architecture pattern with clear separation of concerns:
+Flowence follows a modern, scalable architecture with **multi-store support from the ground up**. Each owner can manage multiple stores, with complete data isolation between stores.
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Backend       │    │   Database      │
-│   (React PWA)   │◄──►│   (Node.js)     │◄──►│   (PostgreSQL)  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   CDN/Static    │    │   External      │    │   Backup        │
-│   Assets        │    │   Services      │    │   Storage       │
+│   (Next.js)     │◄──►│   (Node.js)     │◄──►│   (PostgreSQL)  │
+│   + Store       │    │   + Store       │    │   + Store       │
+│   Context       │    │   Middleware    │    │   Isolation     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 ### Key Principles
-- **Separation of Concerns**: Clear boundaries between frontend, backend, and data layers
-- **Stateless Backend**: JWT-based authentication for scalability
-- **Progressive Web App**: Offline capabilities and mobile-first design
-- **Microservices Ready**: Modular design for future service extraction
-- **Security First**: Authentication, authorization, and data protection at every layer
+- **Multi-Store First**: Every data model includes store_id for isolation
+- **Store Context**: Active store maintained throughout user session
+- **Data Isolation**: Database-level constraints ensure store separation
+- **Scalable**: Owner can manage 1 to 100+ stores with same architecture
+- **Security First**: Role and store access validated at every layer
+
+## Multi-Store Architecture
+
+### Core Concept
+```
+Owner Account
+    ├── Store 1 (Coffee Shop Downtown)
+    │   ├── Products (100 items)
+    │   ├── Employees (5 users)
+    │   └── Sales (Daily transactions)
+    │
+    ├── Store 2 (Coffee Shop Uptown)
+    │   ├── Products (120 items)
+    │   ├── Employees (3 users)
+    │   └── Sales (Daily transactions)
+    │
+    └── Store 3 (Coffee Shop Airport)
+        ├── Products (80 items)
+        ├── Employees (8 users)
+        └── Sales (Daily transactions)
+```
+
+### Key Relationships
+
+#### User-Store Relationship (Many-to-Many)
+```
+Users ←→ UserStores ←→ Stores
+```
+
+- **Owners**: Can have multiple stores they own
+- **Employees**: Typically assigned to one store (can be multiple in future)
+- **UserStores**: Junction table with role per store
+
+#### Data Hierarchy
+```
+Store
+ ├── Products (One-to-Many)
+ ├── Sales (One-to-Many)
+ │   └── SaleItems (One-to-Many)
+ ├── Invitations (One-to-Many)
+ └── UserStores (One-to-Many)
+```
 
 ## System Components
 
-### Frontend Layer (React PWA)
+### Frontend Layer (Next.js App)
 ```
 src/
-├── components/           # Reusable UI components
-│   ├── auth/            # Authentication components
-│   ├── inventory/       # Inventory management
-│   ├── sales/           # Sales processing
-│   └── common/          # Shared components
-├── pages/               # Route-based page components
-├── hooks/               # Custom React hooks
-├── services/            # API communication layer
-├── store/               # State management (Context/Redux)
-├── utils/               # Utility functions
-└── types/               # TypeScript definitions
+├── app/
+│   ├── (auth)/              # Authentication pages
+│   │   ├── login/
+│   │   └── register/
+│   ├── (dashboard)/         # Protected routes
+│   │   ├── dashboard/       # Multi-store overview
+│   │   ├── stores/          # Store management
+│   │   ├── products/        # Inventory (per store)
+│   │   ├── sales/           # Sales (per store)
+│   │   ├── users/           # User management (per store)
+│   │   └── settings/        # Store settings
+│   └── layout.tsx           # Root layout with store context
+│
+├── components/
+│   ├── auth/                # Login, Register, ProtectedRoute
+│   ├── layout/              # Sidebar, Header, StoreSelector
+│   ├── stores/              # StoreCard, StoreForm, StoreList
+│   ├── products/            # ProductList, ProductForm
+│   ├── sales/               # Scanner, Cart, Checkout
+│   └── ui/                  # Reusable UI components
+│
+├── contexts/
+│   ├── AuthContext.tsx      # User authentication state
+│   ├── StoreContext.tsx     # Current store context ⭐
+│   └── CartContext.tsx      # Shopping cart state
+│
+├── hooks/
+│   ├── useAuth.ts           # Authentication hooks
+│   ├── useStore.ts          # Store context hooks ⭐
+│   ├── useApi.ts            # API calls with store context
+│   └── useLocalStorage.ts   # Local storage utilities
+│
+└── types/
+    └── index.ts             # TypeScript definitions
 ```
-
-**Key Features:**
-- Responsive design with Tailwind CSS
-- Barcode scanning with QuaggaJS
-- Offline capability with service workers
-- Real-time updates via WebSocket (future)
-- Progressive Web App features
 
 ### Backend Layer (Node.js/Express)
 ```
 server/
-├── controllers/         # Request handlers
-├── middleware/          # Express middleware
-├── models/              # Database models
-├── routes/              # API route definitions
-├── services/            # Business logic layer
-├── utils/               # Server utilities
-└── config/              # Configuration files
+├── controllers/
+│   ├── AuthController.ts    # Register, Login, Logout
+│   ├── StoreController.ts   # Store CRUD ⭐
+│   ├── ProductController.ts # Product CRUD (per store)
+│   ├── SaleController.ts    # Sales (per store)
+│   └── UserController.ts    # User management
+│
+├── middleware/
+│   ├── auth.ts              # JWT authentication
+│   ├── storeAccess.ts       # Store access validation ⭐
+│   ├── roleCheck.ts         # Role-based permissions
+│   └── errorHandler.ts      # Global error handling
+│
+├── models/
+│   ├── UserModel.ts
+│   ├── StoreModel.ts        # ⭐
+│   ├── UserStoreModel.ts    # Many-to-many ⭐
+│   ├── ProductModel.ts      # Includes store_id
+│   ├── SaleModel.ts         # Includes store_id
+│   └── InvitationModel.ts   # Includes store_id
+│
+├── routes/
+│   ├── auth.ts
+│   ├── stores.ts            # ⭐
+│   ├── products.ts
+│   ├── sales.ts
+│   └── users.ts
+│
+└── services/
+    ├── AuthService.ts
+    ├── StoreService.ts      # ⭐
+    └── SupabaseService.ts
 ```
-
-**Key Features:**
-- RESTful API design
-- JWT-based authentication
-- Input validation and sanitization
-- Error handling and logging
-- Rate limiting and security middleware
-
-### Database Layer (PostgreSQL)
-```
-Database Schema:
-├── users                # User accounts and authentication
-├── stores               # Store information and settings
-├── products             # Product catalog and inventory
-├── sales                # Sales transactions
-├── sale_items           # Individual sale line items
-├── invitations          # User invitation system
-└── audit_logs           # System audit trail
-```
-
-**Key Features:**
-- ACID compliance for data integrity
-- Proper indexing for performance
-- Foreign key constraints for data consistency
-- Audit logging for compliance
-- Backup and recovery procedures
 
 ## Data Flow
 
-### Authentication Flow
+### Multi-Store Authentication Flow
 ```
 1. User Login Request
    ↓
-2. Frontend → Backend (POST /api/auth/login)
+2. Backend validates credentials
    ↓
-3. Backend validates credentials
+3. Fetch user's accessible stores
    ↓
-4. Generate JWT token
+4. Generate JWT with user_id + default_store_id
    ↓
-5. Return token + user info
+5. Return token + user info + stores array
    ↓
-6. Frontend stores token
+6. Frontend stores token + sets active store
    ↓
-7. Subsequent requests include Authorization header
+7. All subsequent requests include store context
 ```
 
-### Sales Processing Flow
+### Store Switching Flow
 ```
-1. Scanner/Manual Product Entry
+1. User clicks store selector
    ↓
-2. Frontend validates product exists
+2. Select different store from list
    ↓
-3. Add to shopping cart (local state)
+3. Update StoreContext with new store_id
    ↓
-4. User confirms sale
+4. Frontend refetches data for new store
    ↓
-5. Frontend → Backend (POST /api/sales)
+5. All API calls now use new store_id
    ↓
-6. Backend validates stock availability
-   ↓
-7. Process payment (Stripe integration)
-   ↓
-8. Create sale record + update inventory
-   ↓
-9. Generate receipt
-   ↓
-10. Return success + receipt data
+6. Store preference saved to localStorage
 ```
 
-### Inventory Management Flow
+### Product Management Flow (With Store Context)
 ```
-1. Owner adds/edits product
+1. Owner navigates to Products
    ↓
-2. Frontend → Backend (POST/PUT /api/products)
+2. API GET /api/products?store_id={active_store}
    ↓
-3. Backend validates data
+3. Backend validates user has access to store
    ↓
-4. Update database
+4. Fetch products WHERE store_id = active_store
    ↓
-5. Return updated product data
+5. Return filtered products
    ↓
-6. Frontend refreshes inventory view
+6. Frontend displays store-specific products
+```
+
+### Sales Processing Flow (With Store Context)
+```
+1. Employee scans product
    ↓
-7. Broadcast update to connected clients (future)
+2. Frontend verifies product exists in CURRENT store
+   ↓
+3. Add to cart (local state)
+   ↓
+4. Confirm sale → POST /api/sales
+   {
+     store_id: active_store_id,
+     items: [...],
+     payment: {...}
+   }
+   ↓
+5. Backend validates:
+   - User has access to store
+   - All products belong to this store
+   - Stock is available
+   ↓
+6. Process payment + update inventory
+   ↓
+7. Create sale record with store_id
+   ↓
+8. Return receipt
 ```
 
 ## Security Architecture
 
-### Authentication & Authorization
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Backend       │    │   Database      │
-│   - JWT Storage │◄──►│   - JWT Verify  │◄──►│   - User Roles  │
-│   - Route Guard │    │   - Role Check  │    │   - Permissions │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
+### Store Access Validation
 
-**Security Measures:**
-- JWT tokens with expiration (30 minutes)
-- Password hashing with bcrypt
-- HTTPS enforcement
-- CORS configuration
-- Input validation and sanitization
-- SQL injection prevention
-- XSS protection
-- Rate limiting
-- Audit logging
-
-### Data Protection
-- Sensitive data encryption at rest
-- Secure password storage (bcrypt)
-- PCI compliance for payment data
-- GDPR compliance considerations
-- Regular security audits
-- Backup encryption
-
-## Scalability Considerations
-
-### Horizontal Scaling
-```
-Load Balancer
-     ↓
-┌─────────┬─────────┬─────────┐
-│Server 1 │Server 2 │Server 3 │
-│(Node.js)│(Node.js)│(Node.js)│
-└─────────┴─────────┴─────────┘
-     ↓         ↓         ↓
-┌─────────────────────────────┐
-│     Shared Database         │
-│     (PostgreSQL)            │
-└─────────────────────────────┘
+#### Middleware Stack
+```typescript
+// Every protected route goes through:
+app.use('/api/*', [
+  authenticate,      // Verify JWT token
+  extractStoreContext, // Get store_id from request
+  validateStoreAccess, // Verify user can access store ⭐
+  roleCheck          // Verify user has required role
+]);
 ```
 
-**Scaling Strategies:**
-- Stateless backend design
-- Database connection pooling
-- CDN for static assets
-- Redis for session storage (future)
-- Microservices extraction (future)
-- Container orchestration (Docker/Kubernetes)
+#### Store Access Validation Logic
+```typescript
+// middleware/storeAccess.ts
+export const validateStoreAccess = async (req, res, next) => {
+  const userId = req.user.id;
+  const storeId = req.body.store_id || req.query.store_id || req.params.store_id;
+  
+  // Check if user has access to this store
+  const hasAccess = await UserStoreModel.checkAccess(userId, storeId);
+  
+  if (!hasAccess) {
+    return res.status(403).json({
+      success: false,
+      error: 'You do not have access to this store'
+    });
+  }
+  
+  // Attach store context to request
+  req.storeId = storeId;
+  next();
+};
+```
 
-### Performance Optimization
-- Database indexing strategy
-- Query optimization
-- Caching mechanisms
-- Image optimization
-- Code splitting (frontend)
-- Lazy loading
-- Service worker caching
+### Data Isolation Strategy
 
-## Technology Decisions
+#### Database Level
+```sql
+-- All data queries include store_id filter
+SELECT * FROM products WHERE store_id = $1;
 
-### Frontend Stack
-| Technology | Purpose | Justification |
-|------------|---------|---------------|
-| React 18+ | UI Framework | Component-based, large ecosystem |
-| TypeScript | Type Safety | Reduced bugs, better developer experience |
-| Tailwind CSS | Styling | Utility-first, responsive design |
-| React Router | Navigation | Standard routing solution |
-| QuaggaJS | Barcode Scanning | Cross-platform, web-based |
-| Axios | HTTP Client | Promise-based, interceptors |
+-- Foreign key constraints
+ALTER TABLE products
+ADD CONSTRAINT fk_products_store
+FOREIGN KEY (store_id) REFERENCES stores(id)
+ON DELETE CASCADE;
 
-### Backend Stack
-| Technology | Purpose | Justification |
-|------------|---------|---------------|
-| Node.js | Runtime | JavaScript ecosystem, fast development |
-| Express | Web Framework | Minimal, flexible, well-documented |
-| Passport.js | Authentication | Multiple strategies, JWT support |
-| PostgreSQL | Database | ACID compliance, relational data |
-| Stripe | Payments | Reliable, secure, well-documented |
-| SendGrid | Email | Reliable delivery, good API |
+-- Row-level security (Supabase/PostgreSQL)
+CREATE POLICY store_isolation ON products
+USING (store_id IN (
+  SELECT store_id FROM user_stores
+  WHERE user_id = auth.uid()
+));
+```
 
-### DevOps Stack
-| Technology | Purpose | Justification |
-|------------|---------|---------------|
-| Docker | Containerization | Consistent environments |
-| Nginx | Reverse Proxy | High performance, SSL termination |
-| PM2 | Process Management | Production-ready Node.js management |
-| Jest | Testing | Comprehensive testing framework |
-| ESLint | Code Quality | Consistent code style |
+#### Application Level
+```typescript
+// All model methods require store_id
+ProductModel.findAll(storeId: string)
+ProductModel.create(storeId: string, data: ProductData)
+SaleModel.findByStore(storeId: string)
+```
 
 ## Database Design
 
+### Core Tables
+
+#### users
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL CHECK (role IN ('owner', 'employee')),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### stores ⭐
+```sql
+CREATE TABLE stores (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  address TEXT,
+  phone VARCHAR(50),
+  currency VARCHAR(3) DEFAULT 'USD',
+  tax_rate DECIMAL(5,2) DEFAULT 0.00,
+  low_stock_threshold INTEGER DEFAULT 5,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  INDEX idx_stores_owner (owner_id)
+);
+```
+
+#### user_stores ⭐ (Many-to-Many)
+```sql
+CREATE TABLE user_stores (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  role VARCHAR(50) NOT NULL CHECK (role IN ('owner', 'employee')),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  UNIQUE(user_id, store_id),
+  INDEX idx_user_stores_user (user_id),
+  INDEX idx_user_stores_store (store_id)
+);
+```
+
+#### products
+```sql
+CREATE TABLE products (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE, ⭐
+  name VARCHAR(255) NOT NULL,
+  barcode VARCHAR(255),
+  price DECIMAL(10,2) NOT NULL,
+  cost DECIMAL(10,2) NOT NULL,
+  stock INTEGER DEFAULT 0,
+  category VARCHAR(100),
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  UNIQUE(store_id, barcode), ⭐ -- Barcode unique per store
+  INDEX idx_products_store (store_id),
+  INDEX idx_products_barcode (barcode)
+);
+```
+
+#### sales
+```sql
+CREATE TABLE sales (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE, ⭐
+  user_id UUID NOT NULL REFERENCES users(id),
+  subtotal DECIMAL(10,2) NOT NULL,
+  tax DECIMAL(10,2) NOT NULL,
+  total DECIMAL(10,2) NOT NULL,
+  payment_method VARCHAR(50) NOT NULL,
+  status VARCHAR(50) DEFAULT 'completed',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  INDEX idx_sales_store (store_id),
+  INDEX idx_sales_user (user_id),
+  INDEX idx_sales_created (created_at)
+);
+```
+
+#### invitations
+```sql
+CREATE TABLE invitations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE, ⭐
+  email VARCHAR(255) NOT NULL,
+  token VARCHAR(255) UNIQUE NOT NULL,
+  role VARCHAR(50) DEFAULT 'employee',
+  status VARCHAR(50) DEFAULT 'pending',
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  INDEX idx_invitations_store (store_id),
+  INDEX idx_invitations_token (token)
+);
+```
+
 ### Entity Relationship Diagram
 ```
-Users ──┬── Stores
-        │
-        └── Sales ── Sale_Items ── Products
-                          │
-                          └── Products ── Stores
+                    ┌─────────────┐
+                    │    Users    │
+                    └──────┬──────┘
+                           │
+                ┌──────────┴──────────┐
+                │                     │
+           owner_id              user_id
+                │                     │
+         ┌──────▼──────┐      ┌──────▼──────┐
+         │   Stores    │──────│ UserStores  │
+         └──────┬──────┘      └─────────────┘
+                │
+         store_id (FK)
+                │
+    ┌───────────┼───────────┬─────────────┐
+    │           │           │             │
+┌───▼───┐   ┌──▼──┐    ┌───▼────┐   ┌────▼────┐
+│Product│   │Sales│    │Invites │   │Settings │
+└───────┘   └──┬──┘    └────────┘   └─────────┘
+                │
+           ┌────▼────┐
+           │SaleItems│
+           └─────────┘
 ```
-
-### Key Relationships
-- **Users ↔ Stores**: Many-to-One (employees belong to one store)
-- **Stores ↔ Products**: One-to-Many (store has many products)
-- **Sales ↔ Sale_Items**: One-to-Many (sale has multiple items)
-- **Products ↔ Sale_Items**: One-to-Many (product can be in multiple sales)
-
-### Indexing Strategy
-```sql
--- Performance indexes
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_products_barcode ON products(barcode);
-CREATE INDEX idx_products_store_id ON products(store_id);
-CREATE INDEX idx_sales_store_id ON sales(store_id);
-CREATE INDEX idx_sales_created_at ON sales(created_at);
-CREATE INDEX idx_sale_items_product_id ON sale_items(product_id);
-```
-
-### Data Consistency
-- Foreign key constraints
-- Check constraints for data validation
-- Triggers for audit logging
-- Transactions for multi-table operations
-- Unique constraints for business rules
 
 ## API Design
 
-### RESTful API Principles
-- Resource-based URLs
-- HTTP methods for operations
-- Consistent response format
-- Proper HTTP status codes
-- Versioning strategy
+### Store Management Endpoints ⭐
 
-### API Endpoints Structure
-```
-/api/v1/
-├── auth/
-│   ├── POST /register
-│   ├── POST /login
-│   ├── POST /logout
-│   └── POST /refresh
-├── users/
-│   ├── GET /
-│   ├── GET /:id
-│   ├── PUT /:id
-│   └── DELETE /:id
-├── stores/
-│   ├── GET /
-│   ├── PUT /:id
-│   └── POST /invite
-├── products/
-│   ├── GET /
-│   ├── POST /
-│   ├── PUT /:id
-│   └── DELETE /:id
-└── sales/
-    ├── GET /
-    ├── POST /
-    └── GET /:id
+```typescript
+// Get all stores for logged-in user
+GET /api/stores
+Response: {
+  success: true,
+  data: [
+    { id, name, address, role: 'owner', ... },
+    { id, name, address, role: 'employee', ... }
+  ]
+}
+
+// Create new store (owners only)
+POST /api/stores
+Body: { name, address, phone, currency, tax_rate }
+Response: { success: true, data: { store } }
+
+// Get store details
+GET /api/stores/:id
+Response: { success: true, data: { store } }
+
+// Update store (owners only)
+PUT /api/stores/:id
+Body: { name, address, ... }
+Response: { success: true, data: { store } }
+
+// Delete store (owners only)
+DELETE /api/stores/:id
+Response: { success: true, message: 'Store deleted' }
 ```
 
-### Response Format
+### Store-Aware Endpoints
+
+All resource endpoints require store_id:
+
+```typescript
+// Products
+GET    /api/products?store_id={id}
+POST   /api/products { store_id, name, price, ... }
+PUT    /api/products/:id { store_id, ... }
+DELETE /api/products/:id?store_id={id}
+
+// Sales
+GET    /api/sales?store_id={id}
+POST   /api/sales { store_id, items, payment, ... }
+GET    /api/sales/:id?store_id={id}
+
+// Users (per store)
+GET    /api/stores/:store_id/users
+POST   /api/stores/:store_id/invite { email, role }
+DELETE /api/stores/:store_id/users/:user_id
+```
+
+### Response Format (With Store Context)
 ```json
 {
   "success": true,
-  "data": { ... },
-  "message": "Operation completed successfully",
-  "timestamp": "2025-10-01T12:00:00Z"
-}
-```
-
-### Error Handling
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid input data",
-    "details": [
-      {
-        "field": "email",
-        "message": "Email is required"
-      }
-    ]
+  "data": {
+    "store_id": "uuid-123",
+    "store_name": "Coffee Shop Downtown",
+    "products": [...]
   },
-  "timestamp": "2025-10-01T12:00:00Z"
+  "message": "Products fetched successfully",
+  "timestamp": "2025-10-09T12:00:00Z"
 }
 ```
 
 ## Frontend Architecture
 
-### Component Architecture
+### Store Context Provider ⭐
+
+```typescript
+// contexts/StoreContext.tsx
+interface StoreContextType {
+  currentStore: Store | null;
+  stores: Store[];
+  switchStore: (storeId: string) => void;
+  refreshStores: () => Promise<void>;
+  isLoading: boolean;
+}
+
+export const StoreProvider: React.FC = ({ children }) => {
+  const [currentStore, setCurrentStore] = useState<Store | null>(null);
+  const [stores, setStores] = useState<Store[]>([]);
+  
+  // Load user's stores on mount
+  useEffect(() => {
+    loadUserStores();
+  }, []);
+  
+  // Load last active store from localStorage
+  useEffect(() => {
+    const lastStoreId = localStorage.getItem('lastActiveStore');
+    if (lastStoreId && stores.length > 0) {
+      switchStore(lastStoreId);
+    } else if (stores.length > 0) {
+      setCurrentStore(stores[0]); // Default to first store
+    }
+  }, [stores]);
+  
+  const switchStore = (storeId: string) => {
+    const store = stores.find(s => s.id === storeId);
+    if (store) {
+      setCurrentStore(store);
+      localStorage.setItem('lastActiveStore', storeId);
+    }
+  };
+  
+  return (
+    <StoreContext.Provider value={{
+      currentStore,
+      stores,
+      switchStore,
+      refreshStores: loadUserStores,
+      isLoading
+    }}>
+      {children}
+    </StoreContext.Provider>
+  );
+};
 ```
-App
-├── Layout
-│   ├── Header
-│   ├── Sidebar
-│   └── Main
-├── Pages
-│   ├── Dashboard
-│   ├── Inventory
-│   ├── Sales
-│   └── Settings
-└── Common
-    ├── Modal
-    ├── Loading
-    └── ErrorBoundary
+
+### Store Selector Component ⭐
+
+```typescript
+// components/layout/StoreSelector.tsx
+export const StoreSelector: React.FC = () => {
+  const { currentStore, stores, switchStore } = useStore();
+  const { user } = useAuth();
+  
+  return (
+    <div className="store-selector">
+      <select 
+        value={currentStore?.id} 
+        onChange={(e) => switchStore(e.target.value)}
+      >
+        {stores.map(store => (
+          <option key={store.id} value={store.id}>
+            {store.name} {store.role === 'owner' ? '👑' : ''}
+          </option>
+        ))}
+      </select>
+      
+      {user?.role === 'owner' && (
+        <button onClick={() => navigate('/stores/new')}>
+          + New Store
+        </button>
+      )}
+    </div>
+  );
+};
 ```
 
-### State Management
-- React Context for global state
-- Local state with useState/useReducer
-- Custom hooks for business logic
-- Service layer for API calls
+### Store-Aware API Hook ⭐
 
-### Routing Strategy
-- Protected routes with authentication guards
-- Role-based route access
-- Lazy loading for performance
-- Breadcrumb navigation
-
-## Deployment Architecture
-
-### Production Environment
+```typescript
+// hooks/useApi.ts
+export const useApi = () => {
+  const { currentStore } = useStore();
+  
+  const fetchProducts = async () => {
+    if (!currentStore) throw new Error('No store selected');
+    
+    return api.get(`/products?store_id=${currentStore.id}`);
+  };
+  
+  const createProduct = async (data: ProductData) => {
+    if (!currentStore) throw new Error('No store selected');
+    
+    return api.post('/products', {
+      ...data,
+      store_id: currentStore.id
+    });
+  };
+  
+  return { fetchProducts, createProduct };
+};
 ```
-Internet
+
+## Store Context Management
+
+### Context Flow
+```
+User Login
     ↓
-┌─────────────────┐
-│   Load Balancer │
-│   (Nginx)       │
-└─────────────────┘
+Fetch User's Stores
     ↓
-┌─────────────────┐
-│   Web Server    │
-│   (Node.js)     │
-└─────────────────┘
+Load Last Active Store (localStorage)
     ↓
-┌─────────────────┐
-│   Database      │
-│   (PostgreSQL)  │
-└─────────────────┘
+Set Current Store Context
+    ↓
+All API Calls Include store_id
+    ↓
+Store Switch Requested
+    ↓
+Update Context + Refetch Data
 ```
 
-### Infrastructure Components
-- **Web Server**: Node.js with PM2
-- **Reverse Proxy**: Nginx for SSL termination
-- **Database**: PostgreSQL with connection pooling
-- **File Storage**: Local filesystem or cloud storage
-- **Monitoring**: Application and infrastructure monitoring
-- **Backup**: Automated database backups
+### Context Persistence
+- **localStorage**: Stores last active store_id
+- **Session**: Current store maintained in React Context
+- **Token**: JWT includes default store (optional optimization)
 
-### CI/CD Pipeline
+### Visual Indicators
+- Store name always visible in header
+- Store icon/color coding
+- Breadcrumbs include store name
+- Dashboard shows multi-store overview for owners
+
+## Scalability Considerations
+
+### Database Optimization
+```sql
+-- Composite indexes for common queries
+CREATE INDEX idx_products_store_category ON products(store_id, category);
+CREATE INDEX idx_sales_store_date ON sales(store_id, created_at DESC);
+CREATE INDEX idx_user_stores_user_role ON user_stores(user_id, role);
 ```
-Code Commit
-    ↓
-GitHub Actions
-    ↓
-├── Lint & Test
-├── Build
-├── Docker Build
-└── Deploy
+
+### Caching Strategy
+- Cache user's stores list (refresh on store creation)
+- Cache store settings per store_id
+- Invalidate cache on store update
+
+### Query Performance
+```typescript
+// Good: Filter by store_id at database level
+SELECT * FROM products WHERE store_id = $1;
+
+// Bad: Fetch all and filter in application
+SELECT * FROM products; // Filter in JS
 ```
 
-### Environment Configuration
-- **Development**: Local development with hot reloading
-- **Staging**: Production-like environment for testing
-- **Production**: Optimized, monitored, and secured
+### Horizontal Scaling
+- Stateless backend (store context in request)
+- Database connection pooling
+- CDN for static assets
+- Load balancer for multiple instances
 
-## Future Architecture Considerations
+## Future Enhancements
 
-### Microservices Migration
-- Extract authentication service
-- Separate inventory management
-- Independent sales processing
-- Dedicated notification service
-
-### Real-time Features
-- WebSocket integration
-- Live inventory updates
-- Real-time notifications
-- Collaborative editing
-
-### Advanced Features
-- Machine learning for inventory prediction
-- Advanced analytics and reporting
-- Multi-store management
-- API for third-party integrations
+### Phase 2+ Features
+- Employee can work at multiple stores
+- Store groups/chains management
+- Cross-store inventory transfer
+- Consolidated reporting across stores
+- Store-to-store comparisons
+- Franchise management features
 
 ---
 
-**Last Updated:** [Current Date]  
-**Version:** 1.0  
-**Architect:** Development Team
-
+**Last Updated:** October 9, 2025  
+**Version:** 1.0 - Multi-Store Architecture  
+**Status:** Foundation Document

@@ -58,16 +58,45 @@ export class SaleModel extends BaseModel {
     }>;
   }): Promise<Sale> {
     try {
-      // Create the sale
-      const sale = await supabaseService.createSale({
-        storeId: saleData.storeId,
-        userId: saleData.userId,
-        totalAmount: saleData.totalAmount,
-        paymentMethod: saleData.paymentMethod,
-        amountReceived: saleData.amountReceived
-      }, saleData.items);
+      // Create the sale (using correct field names)
+      const { data, error } = await this.supabase
+        .from('sales')
+        .insert({
+          store_id: saleData.storeId,
+          user_id: saleData.userId,
+          subtotal: saleData.totalAmount - (saleData.totalAmount * 0.16), // Basic calc, will be improved
+          tax: saleData.totalAmount * 0.16,
+          total: saleData.totalAmount,
+          payment_method: saleData.paymentMethod,
+          payment_status: 'completed'
+        })
+        .select()
+        .single();
 
-      return sale;
+      if (error) {
+        this.handleError(error, 'Create sale');
+      }
+
+      // Create sale items
+      if (saleData.items && saleData.items.length > 0) {
+        const saleItems = saleData.items.map(item => ({
+          sale_id: data.id,
+          product_id: item.productId,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          subtotal: item.quantity * item.unitPrice
+        }));
+
+        const { error: itemsError } = await this.supabase
+          .from('sale_items')
+          .insert(saleItems);
+
+        if (itemsError) {
+          this.handleError(itemsError, 'Create sale items');
+        }
+      }
+
+      return data;
     } catch (error) {
       this.handleError(error, 'Create sale');
     }

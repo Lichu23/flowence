@@ -34,7 +34,7 @@ export class AuthController {
       .trim()
       .isLength({ min: 1, max: 255 })
       .withMessage('Name is required and must be less than 255 characters'),
-    body('storeName')
+    body('store_name')
       .trim()
       .isLength({ min: 1, max: 255 })
       .withMessage('Store name is required and must be less than 255 characters')
@@ -109,8 +109,9 @@ export class AuthController {
         success: response.success,
         hasData: !!response.data,
         message: response.message,
-        hasAccessToken: !!(response.data as any)?.accessToken,
-        userId: (response.data as any)?.user?.id
+        hasToken: !!(response.data as any)?.token,
+        userId: (response.data as any)?.user?.id,
+        storesCount: (response.data as any)?.user?.stores?.length || 0
       });
 
       // Log the complete response structure
@@ -289,191 +290,40 @@ export class AuthController {
     }
   }
 
-  async changePassword(req: Request, res: Response): Promise<void> {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data',
-            details: errors.array().map(error => ({
-              field: error.type === 'field' ? error.path : 'unknown',
-              message: error.msg,
-              value: error.type === 'field' ? error.value : undefined
-            }))
-          },
-          timestamp: new Date().toISOString()
-        });
-        return;
-      }
-
-      const { currentPassword, newPassword } = req.body;
-      const userId = (req as any).user.id;
-
-      await this.authService.changePassword(userId, currentPassword, newPassword);
-
-      const response: ApiResponse = {
-        success: true,
-        message: 'Password changed successfully',
-        timestamp: new Date().toISOString()
-      };
-
-      res.status(200).json(response);
-    } catch (error) {
-      console.error('Password change error:', error);
-
-      if (error instanceof AuthenticationError) {
-        res.status(401).json({
-          success: false,
-          error: {
-            code: 'AUTHENTICATION_FAILED',
-            message: error.message
-          },
-          timestamp: new Date().toISOString()
-        });
-        return;
-      }
-
-      if (error instanceof ValidationError) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: error.message,
-            details: error.details
-          },
-          timestamp: new Date().toISOString()
-        });
-        return;
-      }
-
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'PASSWORD_CHANGE_FAILED',
-          message: 'Password change failed'
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
+  async changePassword(_req: Request, res: Response): Promise<void> {
+    // TODO: Implement change password functionality
+    res.status(501).json({
+      success: false,
+      error: {
+        code: 'NOT_IMPLEMENTED',
+        message: 'Change password feature coming soon'
+      },
+      timestamp: new Date().toISOString()
+    });
   }
 
-  async forgotPassword(req: Request, res: Response): Promise<void> {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data',
-            details: errors.array().map(error => ({
-              field: error.type === 'field' ? error.path : 'unknown',
-              message: error.msg,
-              value: error.type === 'field' ? error.value : undefined
-            }))
-          },
-          timestamp: new Date().toISOString()
-        });
-        return;
-      }
-
-      const { email } = req.body;
-      await this.authService.forgotPassword(email);
-
-      const response: ApiResponse = {
-        success: true,
-        message: 'Password reset instructions sent to your email',
-        timestamp: new Date().toISOString()
-      };
-
-      res.status(200).json(response);
-    } catch (error) {
-      console.error('Forgot password error:', error);
-
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'FORGOT_PASSWORD_FAILED',
-          message: 'Password reset request failed'
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
+  async forgotPassword(_req: Request, res: Response): Promise<void> {
+    // TODO: Implement forgot password functionality
+    res.status(501).json({
+      success: false,
+      error: {
+        code: 'NOT_IMPLEMENTED',
+        message: 'Forgot password feature coming soon'
+      },
+      timestamp: new Date().toISOString()
+    });
   }
 
-  async resetPassword(req: Request, res: Response): Promise<void> {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data',
-            details: errors.array().map(error => ({
-              field: error.type === 'field' ? error.path : 'unknown',
-              message: error.msg,
-              value: error.type === 'field' ? error.value : undefined
-            }))
-          },
-          timestamp: new Date().toISOString()
-        });
-        return;
-      }
-
-      const { token, newPassword } = req.body;
-      await this.authService.resetPassword(token, newPassword);
-
-      const response: ApiResponse = {
-        success: true,
-        message: 'Password reset successfully',
-        timestamp: new Date().toISOString()
-      };
-
-      res.status(200).json(response);
-    } catch (error) {
-      console.error('Password reset error:', error);
-
-      if (error instanceof AuthenticationError) {
-        res.status(401).json({
-          success: false,
-          error: {
-            code: 'INVALID_RESET_TOKEN',
-            message: error.message
-          },
-          timestamp: new Date().toISOString()
-        });
-        return;
-      }
-
-      if (error instanceof ValidationError) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: error.message,
-            details: error.details
-          },
-          timestamp: new Date().toISOString()
-        });
-        return;
-      }
-
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'PASSWORD_RESET_FAILED',
-          message: 'Password reset failed'
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
+  async resetPassword(_req: Request, res: Response): Promise<void> {
+    // TODO: Implement reset password functionality
+    res.status(501).json({
+      success: false,
+      error: {
+        code: 'NOT_IMPLEMENTED',
+        message: 'Reset password feature coming soon'
+      },
+      timestamp: new Date().toISOString()
+    });
   }
 
   async logout(req: Request, res: Response): Promise<void> {
@@ -524,23 +374,22 @@ export class AuthController {
 
   async me(req: Request, res: Response): Promise<void> {
     try {
-      const user = (req as any).user;
-      console.log('👤 AuthController: Getting user profile for:', user.email);
+      const userId = (req as any).user.id;
+      console.log('👤 AuthController: Getting user profile with stores for:', userId);
+      
+      // Get user with stores from service
+      const userWithStores = await this.authService.getCurrentUser(userId);
       
       const response: ApiResponse = {
         success: true,
         data: {
-          user: user
+          user: userWithStores
         },
         message: 'User profile retrieved successfully',
         timestamp: new Date().toISOString()
       };
 
-      console.log('📤 AuthController: Sending user profile:', {
-        userId: user.id,
-        email: user.email,
-        storeId: user.storeId
-      });
+      console.log('📤 AuthController: Sending user profile with', userWithStores.stores.length, 'stores');
 
       res.json(response);
     } catch (error) {

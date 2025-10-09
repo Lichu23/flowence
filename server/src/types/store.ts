@@ -1,61 +1,100 @@
+/**
+ * Store Types (Multi-Store Architecture)
+ */
+
 export interface Store {
   id: string;
+  owner_id: string;
   name: string;
   address?: string;
   phone?: string;
   currency: string;
-  taxRate: number;
-  lowStockThreshold: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  tax_rate: number;
+  low_stock_threshold: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateStoreData {
+  owner_id: string;
+  name: string;
+  address?: string;
+  phone?: string;
+  currency?: string;
+  tax_rate?: number;
+  low_stock_threshold?: number;
+}
+
+export interface UpdateStoreData {
+  name?: string;
+  address?: string;
+  phone?: string;
+  currency?: string;
+  tax_rate?: number;
+  low_stock_threshold?: number;
+}
+
+export interface StoreWithOwner extends Store {
+  owner: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 export interface StoreSettings {
   currency: string;
-  taxRate: number;
-  lowStockThreshold: number;
-  timezone: string;
-  dateFormat: string;
-  timeFormat: string;
-  receiptHeader?: string;
-  receiptFooter?: string;
+  tax_rate: number;
+  low_stock_threshold: number;
+  timezone?: string;
+  date_format?: string;
+  time_format?: string;
+  receipt_header?: string;
+  receipt_footer?: string;
+  logo_url?: string;
 }
 
 export interface StoreStats {
-  totalProducts: number;
-  totalSales: number;
-  totalRevenue: number;
-  lowStockProducts: number;
-  totalUsers: number;
-  averageSaleAmount: number;
-  lastSaleDate?: Date;
+  total_products: number;
+  total_sales: number;
+  total_revenue: number;
+  low_stock_products: number;
+  total_users: number;
+  average_sale_amount: number;
+  last_sale_date?: string;
 }
 
 export interface StoreAnalytics {
-  dailyRevenue: Array<{
+  daily_revenue: Array<{
     date: string;
     revenue: number;
     sales: number;
   }>;
-  topProducts: Array<{
-    productId: string;
-    productName: string;
-    quantitySold: number;
+  top_products: Array<{
+    product_id: string;
+    product_name: string;
+    quantity_sold: number;
     revenue: number;
   }>;
-  salesByPaymentMethod: Array<{
-    paymentMethod: string;
+  sales_by_payment_method: Array<{
+    payment_method: string;
     count: number;
     total: number;
   }>;
-  lowStockAlerts: Array<{
-    productId: string;
-    productName: string;
-    currentStock: number;
+  low_stock_alerts: Array<{
+    product_id: string;
+    product_name: string;
+    current_stock: number;
     threshold: number;
   }>;
 }
 
-
-
+export interface StoreListItem {
+  id: string;
+  name: string;
+  address?: string;
+  role: 'owner' | 'employee'; // User's role in this store
+  product_count?: number;
+  employee_count?: number;
+  last_sale_date?: string;
+}

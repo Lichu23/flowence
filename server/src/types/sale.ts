@@ -1,31 +1,47 @@
+/**
+ * Sale Types (Multi-Store Architecture)
+ */
+
 export interface Sale {
   id: string;
-  storeId: string;
-  userId: string;
-  totalAmount: number;
-  taxAmount: number;
-  paymentMethod: 'cash' | 'card';
-  amountReceived?: number;
-  change?: number;
-  status: 'completed' | 'cancelled' | 'refunded';
-  receiptNumber: string;
-  createdAt: Date;
-  updatedAt: Date;
+  store_id: string; // Multi-store: each sale belongs to one store
+  user_id: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  payment_method: 'cash' | 'card' | 'other';
+  payment_status: 'pending' | 'completed' | 'failed' | 'refunded';
+  notes?: string;
+  created_at: string;
 }
 
 export interface SaleItem {
   id: string;
-  saleId: string;
-  productId: string;
-  productName: string;
+  sale_id: string;
+  product_id: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  createdAt: Date;
+  unit_price: number;
+  subtotal: number;
+  created_at: string;
+}
+
+export interface CreateSaleData {
+  store_id: string;
+  user_id: string;
+  items: Array<{
+    product_id: string;
+    quantity: number;
+    unit_price: number;
+  }>;
+  payment_method: 'cash' | 'card' | 'other';
+  notes?: string;
 }
 
 export interface SaleWithItems extends Sale {
-  items: SaleItem[];
+  items: Array<SaleItem & {
+    product_name: string;
+    product_barcode?: string;
+  }>;
   user: {
     id: string;
     name: string;
@@ -34,30 +50,32 @@ export interface SaleWithItems extends Sale {
 }
 
 export interface SalesSummary {
-  totalSales: number;
-  totalRevenue: number;
-  averageSaleAmount: number;
-  salesByPaymentMethod: {
+  total_sales: number;
+  total_revenue: number;
+  average_sale_amount: number;
+  sales_by_payment_method: {
     cash: number;
     card: number;
+    other: number;
   };
-  salesByDate: Array<{
+  sales_by_date: Array<{
     date: string;
     count: number;
     revenue: number;
   }>;
-  topProducts: Array<{
-    productId: string;
-    productName: string;
-    quantitySold: number;
+  top_products: Array<{
+    product_id: string;
+    product_name: string;
+    quantity_sold: number;
     revenue: number;
   }>;
 }
 
 export interface SalesReport {
+  store_id: string;
   period: {
-    startDate: Date;
-    endDate: Date;
+    start_date: string;
+    end_date: string;
   };
   summary: SalesSummary;
   sales: SaleWithItems[];
@@ -65,49 +83,49 @@ export interface SalesReport {
     page: number;
     limit: number;
     total: number;
-    totalPages: number;
+    total_pages: number;
   };
 }
 
 export interface RefundRequest {
-  saleId: string;
+  sale_id: string;
   items: Array<{
-    saleItemId: string;
+    sale_item_id: string;
     quantity: number;
     reason: string;
   }>;
   reason: string;
-  refundMethod: 'cash' | 'card';
+  refund_method: 'cash' | 'card';
 }
 
 export interface Refund {
   id: string;
-  saleId: string;
+  sale_id: string;
   amount: number;
   reason: string;
-  refundMethod: 'cash' | 'card';
-  processedBy: string;
-  processedAt: Date;
-  createdAt: Date;
+  refund_method: 'cash' | 'card';
+  processed_by: string;
+  processed_at: string;
+  created_at: string;
 }
 
+// Frontend types
 export interface ShoppingCart {
+  store_id: string; // Cart is specific to a store
   items: CartItem[];
   subtotal: number;
-  taxAmount: number;
+  tax_amount: number;
   total: number;
-  itemCount: number;
+  item_count: number;
 }
 
 export interface CartItem {
-  productId: string;
-  productName: string;
+  product_id: string;
+  product_name: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
+  unit_price: number;
+  total_price: number;
   barcode?: string;
   category?: string;
+  available_stock: number;
 }
-
-
-

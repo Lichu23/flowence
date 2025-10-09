@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/AuthController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 const authController = new AuthController();
@@ -14,8 +14,8 @@ router.post('/reset-password', AuthController.resetPasswordValidation, authContr
 router.post('/logout', authController.logout.bind(authController)); // Moved to public routes
 
 // Protected routes
-router.get('/me', authenticateToken, authController.me.bind(authController));
-router.post('/change-password', authenticateToken, AuthController.changePasswordValidation, authController.changePassword.bind(authController));
+router.get('/me', authenticate, authController.me.bind(authController));
+router.post('/change-password', authenticate, AuthController.changePasswordValidation, authController.changePassword.bind(authController));
 
 export default router;
 

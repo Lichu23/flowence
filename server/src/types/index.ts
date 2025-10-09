@@ -35,28 +35,13 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   pagination: PaginationInfo;
 }
 
-// Authentication types
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  name: string;
-  storeName: string;
-}
+// Note: LoginRequest, RegisterRequest, and AuthResponse are defined in user.ts
+// Kept here for backwards compatibility
+export type LoginRequest = import('./user').LoginCredentials;
+export type RegisterRequest = import('./user').RegisterData;
 
 export interface RefreshTokenRequest {
   refreshToken: string;
-}
-
-export interface AuthResponse {
-  user: User;
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
 }
 
 // User types

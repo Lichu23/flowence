@@ -1,53 +1,95 @@
+/**
+ * User Types (Multi-Store Architecture)
+ */
+
 export interface User {
   id: string;
   email: string;
+  password_hash: string;
   name: string;
   role: 'owner' | 'employee';
-  storeId: string;
-  isActive: boolean;
-  lastLoginAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface UserProfile extends Omit<User, 'id' | 'createdAt' | 'updatedAt'> {
-  store?: {
+export interface CreateUserData {
+  email: string;
+  password: string;
+  name: string;
+  role: 'owner' | 'employee';
+}
+
+export interface UpdateUserData {
+  email?: string;
+  name?: string;
+  role?: 'owner' | 'employee';
+}
+
+export interface UserWithStores extends User {
+  stores: Array<{
+    id: string;
+    name: string;
+    role: 'owner' | 'employee';
+  }>;
+}
+
+export interface UserProfile extends Omit<User, 'password_hash'> {
+  stores: Array<{
     id: string;
     name: string;
     address?: string;
     phone?: string;
-  };
+    role: 'owner' | 'employee';
+  }>;
 }
 
 export interface UserStats {
-  totalSales: number;
-  totalRevenue: number;
-  averageSaleAmount: number;
-  lastSaleDate?: Date;
+  total_sales: number;
+  total_revenue: number;
+  average_sale_amount: number;
+  last_sale_date?: string;
 }
 
 export interface UserInvitation {
   id: string;
+  store_id: string;
   email: string;
-  role: 'employee';
-  storeId: string;
-  invitedBy: string;
+  role: 'employee' | 'owner';
   token: string;
-  expiresAt: Date;
-  acceptedAt?: Date;
-  createdAt: Date;
+  status: 'pending' | 'accepted' | 'expired' | 'revoked';
+  invited_by: string;
+  expires_at: string;
+  accepted_at?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UserSession {
   id: string;
-  userId: string;
+  user_id: string;
   token: string;
-  expiresAt: Date;
-  createdAt: Date;
-  lastAccessedAt: Date;
-  ipAddress?: string;
-  userAgent?: string;
+  expires_at: string;
+  created_at: string;
+  last_accessed_at: string;
+  ip_address?: string;
+  user_agent?: string;
 }
 
+// Authentication related types
+export interface AuthResponse {
+  user: UserProfile;
+  token: string;
+  refresh_token?: string;
+}
 
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
 
+export interface RegisterData {
+  email: string;
+  password: string;
+  name: string;
+  store_name: string; // First store name
+}

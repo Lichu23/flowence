@@ -1,57 +1,95 @@
+/**
+ * User Model (Multi-Store Architecture)
+ * Handles user data and authentication
+ */
+
 import { BaseModel } from './BaseModel';
-import { supabaseService } from '../services/SupabaseService';
-import { User } from '../types';
+import { User, CreateUserData, UpdateUserData, UserWithStores } from '../types/user';
+import bcrypt from 'bcryptjs';
 
 export class UserModel extends BaseModel {
+  /**
+   * Find user by ID
+   */
   async findById(id: string): Promise<User | null> {
-    try {
-      return await supabaseService.getUserById(id);
-    } catch (error) {
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
       return null;
     }
+
+    return data;
   }
 
+  /**
+   * Find user by email
+   */
   async findByEmail(email: string): Promise<User | null> {
-    try {
-      const { data, error } = await this.supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .eq('is_active', true)
-        .single();
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
 
-      if (error) {
-        return null;
-      }
-
-      return data;
-    } catch (error) {
+    if (error) {
       return null;
     }
+
+    return data;
   }
 
-  async findByStore(storeId: string): Promise<User[]> {
-    try {
-      return await supabaseService.getUsers(storeId);
-    } catch (error) {
-      return [];
-    }
+  /**
+   * Get user with their accessible stores
+   */
+  async findByIdWithStores(id: string): Promise<UserWithStores | null> {
+    const user = await this.findById(id);
+    if (!user) return null;
+
+    const { data: userStores } = await this.supabase
+      .from('user_stores')
+      .select(`
+        role,
+        store:stores (
+          id,
+          name,
+          address,
+          phone
+        )
+      `)
+      .eq('user_id', id);
+
+    const stores = userStores?.map((us: any) => ({
+      id: us.store?.id,
+      name: us.store?.name,
+      address: us.store?.address,
+      phone: us.store?.phone,
+      role: us.role
+    })) || [];
+
+    return {
+      ...user,
+      stores
+    };
   }
 
-  async create(userData: {
-    email: string;
-    name: string;
-    role: 'owner' | 'employee';
-    storeId?: string;
-  }): Promise<User> {
+  /**
+   * Create new user with hashed password
+   */
+  async create(userData: CreateUserData): Promise<User> {
+    // Hash password
+    const password_hash = await bcrypt.hash(userData.password, 12);
+
     const { data, error } = await this.supabase
       .from('users')
       .insert({
         email: userData.email,
+        password_hash,
         name: userData.name,
-        role: userData.role,
-        store_id: userData.storeId,
-        is_active: true
+        role: userData.role
       })
       .select()
       .single();
@@ -63,7 +101,10 @@ export class UserModel extends BaseModel {
     return data;
   }
 
-  async update(id: string, updates: Partial<User>): Promise<User> {
+  /**
+   * Update user
+   */
+  async update(id: string, updates: UpdateUserData): Promise<User> {
     const { data, error } = await this.supabase
       .from('users')
       .update(updates)
@@ -78,10 +119,53 @@ export class UserModel extends BaseModel {
     return data;
   }
 
-  async delete(id: string): Promise<void> {
+  /**
+   * Validate user password
+   */
+  async validatePassword(email: string, password: string): Promise<User | null> {
+    const user = await this.findByEmail(email);
+    if (!user) return null;
+
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) return null;
+
+    return user;
+  }
+
+  /**
+   * Update user password
+   */
+  async updatePassword(userId: string, newPassword: string): Promise<void> {
+    const password_hash = await bcrypt.hash(newPassword, 12);
+
     const { error } = await this.supabase
       .from('users')
-      .update({ is_active: false })
+      .update({ password_hash })
+      .eq('id', userId);
+
+    if (error) {
+      this.handleError(error, 'Update password');
+    }
+  }
+
+  /**
+   * Delete user (soft delete by removing from all stores)
+   */
+  async delete(id: string): Promise<void> {
+    // First remove from all stores
+    const { error: userStoreError } = await this.supabase
+      .from('user_stores')
+      .delete()
+      .eq('user_id', id);
+
+    if (userStoreError) {
+      this.handleError(userStoreError, 'Remove user from stores');
+    }
+
+    // Then delete user
+    const { error } = await this.supabase
+      .from('users')
+      .delete()
       .eq('id', id);
 
     if (error) {
@@ -89,30 +173,21 @@ export class UserModel extends BaseModel {
     }
   }
 
-  async validatePassword(email: string, password: string): Promise<User | null> {
-    try {
-      // This method is now handled by Supabase Auth
-      // We'll use signIn and then fetch user data
-      const authData = await supabaseService.signIn(email, password);
-      
-      if (!authData.user) {
-        return null;
-      }
-
-      return await this.findById(authData.user.id);
-    } catch (error) {
-      return null;
-    }
-  }
-
-  async updatePassword(userId: string, newPassword: string): Promise<void> {
-    const { error } = await this.supabase.auth.admin.updateUserById(
-      userId,
-      { password: newPassword }
-    );
+  /**
+   * Get all users in a specific store
+   */
+  async findByStore(storeId: string): Promise<User[]> {
+    const { data, error } = await this.supabase
+      .from('user_stores')
+      .select(`
+        user:users (*)
+      `)
+      .eq('store_id', storeId);
 
     if (error) {
-      this.handleError(error, 'Update password');
+      this.handleError(error, 'Get store users');
     }
+
+    return (data?.map((item: any) => item.user).filter(Boolean) || []) as User[];
   }
 }
