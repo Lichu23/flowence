@@ -28,6 +28,12 @@ export class AuthService {
       console.log('📧 Email:', registerData.email);
       console.log('👤 Name:', registerData.name);
       console.log('🏪 First Store:', registerData.store_name);
+      if (registerData.store_address) {
+        console.log('📍 Store Address:', registerData.store_address);
+      }
+      if (registerData.store_phone) {
+        console.log('📞 Store Phone:', registerData.store_phone);
+      }
 
       // Validate password strength
       const passwordValidation = this.validatePasswordStrength(registerData.password);
@@ -51,15 +57,25 @@ export class AuthService {
       });
       console.log('✅ User created:', user.id);
 
-      // 2. Create first store
+      // 2. Create first store with address and phone if provided
       console.log('🏪 Creating first store...');
-      const store = await storeModel.create({
+      const storeData: any = {
         owner_id: user.id,
         name: registerData.store_name,
         currency: 'USD',
         tax_rate: 0,
         low_stock_threshold: 5
-      });
+      };
+
+      // Only include address and phone if they were provided
+      if (registerData.store_address) {
+        storeData.address = registerData.store_address;
+      }
+      if (registerData.store_phone) {
+        storeData.phone = registerData.store_phone;
+      }
+
+      const store = await storeModel.create(storeData);
       console.log('✅ Store created:', store.id);
 
       // 3. Create user-store relationship
@@ -150,11 +166,44 @@ export class AuthService {
 
   /**
    * Refresh token
+   * Accepts tokens that are expired within a 5-minute grace period
    */
   async refreshToken(token: string): Promise<AuthResponse> {
     try {
-      // Verify token
-      const payload = jwt.verify(token, config.jwt.secret as string) as any;
+      let payload: any;
+      
+      // Try to verify token normally first
+      try {
+        payload = jwt.verify(token, config.jwt.secret as string, {
+          issuer: 'flowence',
+          audience: 'flowence-users'
+        }) as any;
+      } catch (error) {
+        // If token is expired, try to verify with grace period
+        if (error instanceof jwt.TokenExpiredError) {
+          console.log('⏰ Token expired, checking grace period...');
+          
+          // Decode without verification to check expiry time
+          const decoded = jwt.decode(token) as any;
+          if (!decoded || !decoded.exp) {
+            throw new Error('Invalid token format');
+          }
+          
+          const expiryTime = decoded.exp * 1000; // Convert to milliseconds
+          const now = Date.now();
+          const gracePeriod = 5 * 60 * 1000; // 5 minutes in milliseconds
+          
+          // Allow refresh if token expired within last 5 minutes
+          if (now - expiryTime > gracePeriod) {
+            throw new Error('Token expired beyond grace period');
+          }
+          
+          console.log('✅ Token within grace period, allowing refresh');
+          payload = decoded;
+        } else {
+          throw error;
+        }
+      }
       
       // Get user with stores
       const userWithStores = await userModel.findByIdWithStores(payload.userId);
@@ -169,6 +218,8 @@ export class AuthService {
         role: userWithStores.role
       });
 
+      console.log('🔄 Token refreshed successfully for user:', userWithStores.email);
+
       // Return user profile (without password_hash)
       const { password_hash, ...userProfile } = userWithStores;
 
@@ -177,6 +228,7 @@ export class AuthService {
         token: newToken
       };
     } catch (error) {
+      console.error('❌ Token refresh failed:', error);
       throw new Error('Invalid or expired token');
     }
   }

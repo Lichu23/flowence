@@ -11,6 +11,8 @@ import { ApiResponse } from './types';
 // Import routes
 import authRoutes from './routes/auth';
 import storeRoutes from './routes/stores';
+import invitationRoutes from './routes/invitations';
+import productRoutes from './routes/products';
 
 const app: Application = express();
 
@@ -116,6 +118,8 @@ app.get('/api', (_req: Request, res: Response) => {
         health: '/health',
         auth: '/api/auth/*',
         stores: '/api/stores/*',
+        invitations: '/api/invitations/*',
+        products: '/api/products/*',
         api: '/api'
       }
     },
@@ -129,6 +133,8 @@ app.get('/api', (_req: Request, res: Response) => {
 // Mount API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/stores', storeRoutes);
+app.use('/api/invitations', invitationRoutes);
+app.use('/api', productRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

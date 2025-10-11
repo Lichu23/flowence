@@ -85,18 +85,20 @@
 ### Phase 2: Inventory & User Management (Weeks 4-6)
 **Goal:** Implement inventory management per store and user invitation system
 
-#### Sprint 2.1: Invitation System (Week 4)
-- [ ] Email invitation system for employees
-- [ ] Invitation links with store association
-- [ ] Employee acceptance and account creation
-- [ ] User-store assignment
-- [ ] Employee list per store
+#### Sprint 2.1: Invitation System (Week 4) ✅ COMPLETADO
+- [x] Email invitation system for employees
+- [x] Invitation links with store association
+- [x] Employee acceptance and account creation
+- [x] User-store assignment
+- [x] Employee list per store
 
 **Deliverables:**
-- [ ] Owners can invite employees to specific stores
-- [ ] Employees can accept invitations
-- [ ] Employee dashboard shows assigned store only
-- [ ] User management UI per store
+- [x] Owners can invite employees to specific stores
+- [x] Employees can accept invitations
+- [x] Employee dashboard shows assigned store only
+- [x] User management UI per store
+
+**Nota:** SendGrid integration pendiente (opcional), invitaciones funcionan con URL manual.
 
 #### Sprint 2.2: Inventory Management - Part 1 (Week 5)
 - [ ] Product model with store association

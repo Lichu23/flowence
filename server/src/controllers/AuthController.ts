@@ -37,7 +37,17 @@ export class AuthController {
     body('store_name')
       .trim()
       .isLength({ min: 1, max: 255 })
-      .withMessage('Store name is required and must be less than 255 characters')
+      .withMessage('Store name is required and must be less than 255 characters'),
+    body('store_address')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('Store address must be less than 500 characters'),
+    body('store_phone')
+      .optional()
+      .trim()
+      .isLength({ max: 20 })
+      .withMessage('Store phone must be less than 20 characters')
   ];
 
   static refreshTokenValidation = [

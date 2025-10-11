@@ -92,4 +92,6 @@ export interface RegisterData {
   password: string;
   name: string;
   store_name: string; // First store name
+  store_address?: string; // First store address (optional)
+  store_phone?: string; // First store phone (optional)
 }

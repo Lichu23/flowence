@@ -1,50 +1,68 @@
 /**
- * Product Types (Multi-Store Architecture)
+ * Product Types
+ * Types for inventory management
  */
 
 export interface Product {
   id: string;
-  store_id: string; // Multi-store: each product belongs to one store
+  store_id: string;
   name: string;
+  description?: string;
   barcode?: string;
+  sku?: string;
+  category?: string;
   price: number;
   cost: number;
   stock: number;
-  category?: string;
-  description?: string;
+  min_stock: number;
+  unit: string;
   image_url?: string;
-  created_at: string;
-  updated_at: string;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface CreateProductData {
   store_id: string;
   name: string;
+  description?: string;
   barcode?: string;
+  sku?: string;
+  category?: string;
   price: number;
   cost: number;
-  stock?: number;
-  category?: string;
-  description?: string;
+  stock: number;
+  min_stock?: number;
+  unit?: string;
   image_url?: string;
+  is_active?: boolean;
 }
 
 export interface UpdateProductData {
   name?: string;
+  description?: string;
   barcode?: string;
+  sku?: string;
+  category?: string;
   price?: number;
   cost?: number;
   stock?: number;
-  category?: string;
-  description?: string;
+  min_stock?: number;
+  unit?: string;
   image_url?: string;
+  is_active?: boolean;
 }
 
-export interface ProductWithStore extends Product {
-  store: {
-    id: string;
-    name: string;
-  };
+export interface ProductFilters {
+  store_id: string;
+  search?: string | undefined;
+  category?: string | undefined;
+  is_active?: boolean | undefined;
+  low_stock?: boolean | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
+  sort_by?: 'name' | 'price' | 'stock' | 'created_at' | undefined;
+  sort_order?: 'asc' | 'desc' | undefined;
 }
 
 export interface ProductStats {
@@ -52,56 +70,16 @@ export interface ProductStats {
   total_value: number;
   low_stock_count: number;
   out_of_stock_count: number;
-  average_price: number;
-  top_categories: Array<{
-    category: string;
-    count: number;
-    value: number;
-  }>;
+  categories_count: number;
 }
 
-export interface StockMovement {
-  id: string;
-  product_id: string;
-  store_id: string;
-  type: 'in' | 'out' | 'adjustment';
-  quantity: number;
-  reason: string;
-  reference_id?: string; // Sale ID or adjustment ID
-  user_id: string;
-  created_at: string;
-}
-
-export interface LowStockAlert {
-  product_id: string;
-  product_name: string;
-  current_stock: number;
-  threshold: number;
-  category?: string;
-  last_restocked?: string;
-}
-
-export interface ProductSearchParams {
-  store_id: string; // Required: always search within a store
-  search?: string;
-  category?: string;
-  min_price?: number;
-  max_price?: number;
-  low_stock?: boolean;
-  page?: number;
-  limit?: number;
-}
-
-export interface ProductSearchResult {
+export interface ProductListResponse {
   products: Product[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
-
-export interface BulkProductOperation {
-  operation: 'update' | 'delete';
-  product_ids: string[];
-  data?: Partial<UpdateProductData>;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+  stats: ProductStats;
 }
