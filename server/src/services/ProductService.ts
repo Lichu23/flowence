@@ -32,7 +32,17 @@ export class ProductService {
       throw new Error('Cost must be a positive number');
     }
 
-    if (productData.stock < 0) {
+    // Validate dual stock system (required fields)
+    if (productData.stock_deposito < 0) {
+      throw new Error('Warehouse stock cannot be negative');
+    }
+
+    if (productData.stock_venta < 0) {
+      throw new Error('Sales floor stock cannot be negative');
+    }
+
+    // Legacy stock validation (optional field for backward compatibility)
+    if (productData.stock !== undefined && productData.stock < 0) {
       throw new Error('Stock cannot be negative');
     }
 
@@ -123,6 +133,16 @@ export class ProductService {
       throw new Error('Cost must be a positive number');
     }
 
+    // Validate dual stock fields if provided
+    if (updates.stock_deposito !== undefined && updates.stock_deposito < 0) {
+      throw new Error('Warehouse stock cannot be negative');
+    }
+
+    if (updates.stock_venta !== undefined && updates.stock_venta < 0) {
+      throw new Error('Sales floor stock cannot be negative');
+    }
+
+    // Legacy stock validation (for backward compatibility)
     if (updates.stock !== undefined && updates.stock < 0) {
       throw new Error('Stock cannot be negative');
     }

@@ -1,173 +1,76 @@
 import { BaseModel } from './BaseModel';
-import { supabaseService } from '../services/SupabaseService';
-import { Sale } from '../types';
+import { Sale, SaleItem, SaleFilters } from '../types/sale';
 
 export class SaleModel extends BaseModel {
-  async findById(id: string): Promise<Sale | null> {
-    try {
-      const { data, error } = await this.supabase
-        .from('sales')
-        .select(`
-          *,
-          sale_items (
-            *,
-            products (
-              name,
-              barcode
-            )
-          )
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  async findByStore(storeId: string, filters?: {
-    startDate?: string;
-    endDate?: string;
-    paymentMethod?: string;
-    userId?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<Sale[]> {
-    try {
-      return await supabaseService.getSales(storeId, filters);
-    } catch (error) {
-      return [];
-    }
-  }
-
-  async create(saleData: {
-    storeId: string;
-    userId: string;
-    totalAmount: number;
-    paymentMethod: 'cash' | 'card';
-    amountReceived: number;
-    items: Array<{
-      productId: string;
-      quantity: number;
-      unitPrice: number;
-    }>;
-  }): Promise<Sale> {
-    try {
-      // Create the sale (using correct field names)
-      const { data, error } = await this.supabase
-        .from('sales')
-        .insert({
-          store_id: saleData.storeId,
-          user_id: saleData.userId,
-          subtotal: saleData.totalAmount - (saleData.totalAmount * 0.16), // Basic calc, will be improved
-          tax: saleData.totalAmount * 0.16,
-          total: saleData.totalAmount,
-          payment_method: saleData.paymentMethod,
-          payment_status: 'completed'
-        })
-        .select()
-        .single();
-
-      if (error) {
-        this.handleError(error, 'Create sale');
-      }
-
-      // Create sale items
-      if (saleData.items && saleData.items.length > 0) {
-        const saleItems = saleData.items.map(item => ({
-          sale_id: data.id,
-          product_id: item.productId,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          subtotal: item.quantity * item.unitPrice
-        }));
-
-        const { error: itemsError } = await this.supabase
-          .from('sale_items')
-          .insert(saleItems);
-
-        if (itemsError) {
-          this.handleError(itemsError, 'Create sale items');
-        }
-      }
-
-      return data;
-    } catch (error) {
-      this.handleError(error, 'Create sale');
-    }
-  }
-
-  async update(id: string, updates: Partial<Sale>): Promise<Sale> {
-    const { data, error } = await this.supabase
+  async createSale(
+    sale: Omit<Sale, 'id' | 'created_at' | 'updated_at'>,
+    items: Omit<SaleItem, 'id' | 'sale_id' | 'created_at'>[]
+  ): Promise<{ sale: Sale; items: SaleItem[] }> {
+    const { data: saleRows, error: saleErr } = await this.supabase
       .from('sales')
-      .update(updates)
-      .eq('id', id)
-      .select()
+      .insert(sale)
+      .select('*')
+      .limit(1);
+    if (saleErr || !saleRows || saleRows.length === 0) this.handleError(saleErr, 'createSale');
+    const createdSale = saleRows[0] as Sale;
+
+    const withSaleId = items.map(i => ({ ...i, sale_id: createdSale.id }));
+    const { data: itemRows, error: itemErr } = await this.supabase
+      .from('sale_items')
+      .insert(withSaleId)
+      .select('*');
+    if (itemErr) this.handleError(itemErr, 'createSaleItems');
+
+    return { sale: createdSale, items: (itemRows || []) as SaleItem[] };
+  }
+
+  async findById(saleId: string, storeId: string): Promise<{ sale: Sale; items: SaleItem[] } | null> {
+    const { data: sale, error } = await this.supabase
+      .from('sales')
+      .select('*')
+      .eq('id', saleId)
+      .eq('store_id', storeId)
       .single();
+    if (error && (error as any).code !== 'PGRST116') this.handleError(error, 'findSaleById');
+    if (!sale) return null;
 
-    if (error) {
-      this.handleError(error, 'Update sale');
-    }
-
-    return data;
+    const { data: items } = await this.supabase
+      .from('sale_items')
+      .select('*')
+      .eq('sale_id', saleId)
+      .order('created_at', { ascending: true });
+    return { sale: sale as Sale, items: (items || []) as SaleItem[] };
   }
 
-  async delete(id: string): Promise<void> {
-    const { error } = await this.supabase
+  async list(filters: SaleFilters): Promise<{ sales: Sale[]; total: number }> {
+    const { store_id, user_id, payment_method, payment_status, start_date, end_date, page = 1, limit = 20 } = filters;
+    let query = this.supabase
       .from('sales')
-      .delete()
-      .eq('id', id);
+      .select('*', { count: 'exact' })
+      .eq('store_id', store_id);
+    if (user_id) query = query.eq('user_id', user_id);
+    if (payment_method) query = query.eq('payment_method', payment_method);
+    if (payment_status) query = query.eq('payment_status', payment_status);
+    if (start_date) query = query.gte('created_at', start_date.toISOString());
+    if (end_date) query = query.lte('created_at', end_date.toISOString());
 
-    if (error) {
-      this.handleError(error, 'Delete sale');
-    }
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.order('created_at', { ascending: false }).range(from, to);
+
+    const { data, error, count } = await query;
+    if (error) this.handleError(error, 'listSales');
+    return { sales: (data || []) as Sale[], total: count || 0 };
   }
 
-  async getSalesByDateRange(storeId: string, startDate: string, endDate: string): Promise<Sale[]> {
-    try {
-      return await this.findByStore(storeId, { startDate, endDate });
-    } catch (error) {
-      return [];
-    }
-  }
-
-  async getSalesByUser(userId: string, storeId: string): Promise<Sale[]> {
-    try {
-      return await this.findByStore(storeId, { userId });
-    } catch (error) {
-      return [];
-    }
-  }
-
-  async getTotalSales(storeId: string, startDate?: string, endDate?: string): Promise<number> {
-    try {
-      let query = this.supabase
-        .from('sales')
-        .select('total_amount')
-        .eq('store_id', storeId);
-
-      if (startDate) {
-        query = query.gte('created_at', startDate);
-      }
-
-      if (endDate) {
-        query = query.lte('created_at', endDate);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        this.handleError(error, 'Get total sales');
-      }
-
-      return data?.reduce((total, sale) => total + parseFloat(sale.total_amount), 0) || 0;
-    } catch (error) {
-      return 0;
-    }
+  async latestReceiptNumberPrefix(storeId: string, year: number): Promise<string | null> {
+    const { data } = await this.supabase
+      .from('sales')
+      .select('receipt_number')
+      .eq('store_id', storeId)
+      .like('receipt_number', `REC-${year}-%`)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    return data && data.length > 0 ? (data[0] as any).receipt_number : null;
   }
 }

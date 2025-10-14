@@ -24,7 +24,15 @@ export class ProductModel extends BaseModel {
       .from(this.tableName)
       .insert({
         ...productData,
-        min_stock: productData.min_stock ?? 5,
+        // Legacy support
+        stock: (productData.stock_deposito || 0) + (productData.stock_venta || 0), // Total stock for backward compatibility
+        min_stock: productData.min_stock ?? 5, // Legacy field
+        // New dual stock fields
+        stock_deposito: productData.stock_deposito,
+        stock_venta: productData.stock_venta,
+        min_stock_deposito: productData.min_stock_deposito ?? 10, // Default minimum warehouse stock
+        min_stock_venta: productData.min_stock_venta ?? 5, // Default minimum sales floor stock
+        // Other defaults
         unit: productData.unit ?? 'unit',
         is_active: productData.is_active ?? true
       })
@@ -140,9 +148,6 @@ export class ProductModel extends BaseModel {
       query = query.eq('is_active', is_active);
     }
 
-    // Note: low_stock filter is applied after fetching due to column comparison limitation
-    // We'll filter in-memory for products where stock <= min_stock
-
     // Apply sorting
     const ascending = sort_order === 'asc';
     query = query.order(sort_by, { ascending });
@@ -162,9 +167,15 @@ export class ProductModel extends BaseModel {
     let products = (data as Product[]) || [];
 
     // Apply low_stock filter in-memory if needed
-    if (low_stock) {
-      products = products.filter(p => p.stock <= p.min_stock);
+    if (low_stock === true) {
+      // Show only products with low stock (either warehouse or sales floor)
+      products = products.filter(p => 
+        p.stock_venta <= p.min_stock_venta || 
+        p.stock_deposito <= p.min_stock_deposito ||
+        p.stock <= p.min_stock // Legacy support
+      );
     }
+    // If low_stock is false or undefined, show all products (no filtering)
 
     // Get stats
     const stats = await this.getStats(store_id);
@@ -198,25 +209,33 @@ export class ProductModel extends BaseModel {
     // Low stock count - fetch all products and filter in-memory
     const { data: allProducts } = await this.supabase
       .from(this.tableName)
-      .select('stock, min_stock')
+      .select('stock, min_stock, stock_deposito, min_stock_deposito, stock_venta, min_stock_venta')
       .eq('store_id', storeId);
     
-    const lowStockData = (allProducts || []).filter((p: any) => p.stock <= p.min_stock);
+    const lowStockData = (allProducts || []).filter((p: any) => 
+      p.stock_venta <= p.min_stock_venta || 
+      p.stock_deposito <= p.min_stock_deposito ||
+      p.stock <= p.min_stock // Legacy support
+    );
 
-    // Out of stock count
+    // Out of stock count (both warehouse and sales floor empty)
     const { count: outOfStock } = await this.supabase
       .from(this.tableName)
       .select('*', { count: 'exact', head: true })
       .eq('store_id', storeId)
-      .eq('stock', 0);
+      .eq('stock_deposito', 0)
+      .eq('stock_venta', 0);
 
-    // Total value (stock * price)
+    // Total value (warehouse + sales floor stock * cost)
     const { data: products } = await this.supabase
       .from(this.tableName)
-      .select('stock, price')
+      .select('stock, cost, stock_deposito, stock_venta')
       .eq('store_id', storeId);
 
-    const totalValue = (products || []).reduce((sum: number, p: any) => sum + (p.stock * p.price), 0);
+    const totalValue = (products || []).reduce((sum: number, p: any) => {
+      const totalStock = (p.stock_deposito || 0) + (p.stock_venta || 0);
+      return sum + (totalStock * p.cost);
+    }, 0);
 
     // Unique categories
     const { data: categories } = await this.supabase

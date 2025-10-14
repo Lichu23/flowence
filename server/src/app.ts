@@ -13,6 +13,10 @@ import authRoutes from './routes/auth';
 import storeRoutes from './routes/stores';
 import invitationRoutes from './routes/invitations';
 import productRoutes from './routes/products';
+import dashboardRoutes from './routes/dashboard';
+import stockRoutes from './routes/stock';
+import scannerRoutes from './routes/scanner';
+import salesRoutes from './routes/sales';
 
 const app: Application = express();
 
@@ -21,14 +25,14 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        scriptSrc: ["'self'"],
-        connectSrc: ["'self'"],
-        frameSrc: ["'none'"],
-        objectSrc: ["'none'"],
+        defaultSrc: ['\'self\''],
+        styleSrc: ['\'self\'', '\'unsafe-inline\'', 'https://fonts.googleapis.com'],
+        fontSrc: ['\'self\'', 'https://fonts.gstatic.com'],
+        imgSrc: ['\'self\'', 'data:', 'https:'],
+        scriptSrc: ['\'self\''],
+        connectSrc: ['\'self\''],
+        frameSrc: ['\'none\''],
+        objectSrc: ['\'none\''],
         upgradeInsecureRequests: []
       }
     },
@@ -53,10 +57,12 @@ app.use(
   })
 );
 
-// Rate limiting
+// Rate limiting (more permissive in development)
 const limiter = rateLimit({
   windowMs: config.security.rateLimitWindowMs,
-  max: config.security.rateLimitMaxRequests,
+  max: config.server.nodeEnv === 'development' 
+    ? 1000 // 1000 requests per window in development
+    : config.security.rateLimitMaxRequests, // 100 requests per window in production
   message: {
     success: false,
     error: {
@@ -66,7 +72,11 @@ const limiter = rateLimit({
     timestamp: new Date().toISOString()
   },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health check in development
+    return config.server.nodeEnv === 'development' && req.path === '/health';
+  }
 });
 
 app.use(limiter);
@@ -114,14 +124,16 @@ app.get('/api', (_req: Request, res: Response) => {
       description: config.server.appDescription,
       environment: config.server.nodeEnv,
       timestamp: new Date().toISOString(),
-      endpoints: {
-        health: '/health',
-        auth: '/api/auth/*',
-        stores: '/api/stores/*',
-        invitations: '/api/invitations/*',
-        products: '/api/products/*',
-        api: '/api'
-      }
+        endpoints: {
+          health: '/health',
+          auth: '/api/auth/*',
+          stores: '/api/stores/*',
+          invitations: '/api/invitations/*',
+          products: '/api/products/*',
+          dashboard: '/api/dashboard/*',
+          stock: '/api/stock/*',
+          api: '/api'
+        }
     },
     message: 'Welcome to Flowence API',
     timestamp: new Date().toISOString()
@@ -135,6 +147,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/invitations', invitationRoutes);
 app.use('/api', productRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api', stockRoutes);
+app.use('/api', scannerRoutes);
+app.use('/api', salesRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

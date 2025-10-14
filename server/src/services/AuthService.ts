@@ -95,6 +95,7 @@ export class AuthService {
 
       // 5. Generate tokens
       const token = this.generateToken(user);
+      const refreshToken = this.generateRefreshToken(user);
 
       console.log('✅ Registration completed successfully!');
       
@@ -103,7 +104,8 @@ export class AuthService {
       
       return {
         user: userProfile,
-        token
+        token,
+        refreshToken
       };
     } catch (error) {
       console.error('❌ Registration failed:', error);
@@ -131,8 +133,9 @@ export class AuthService {
         throw new Error('Failed to retrieve user data');
       }
 
-      // Generate token
+      // Generate tokens
       const token = this.generateToken(user);
+      const refreshToken = this.generateRefreshToken(user);
 
       console.log('✅ Login successful');
       console.log(`📊 User has access to ${userWithStores.stores.length} store(s)`);
@@ -142,7 +145,8 @@ export class AuthService {
 
       return {
         user: userProfile,
-        token
+        token,
+        refreshToken
       };
     } catch (error) {
       console.error('❌ Login failed:', error);
@@ -165,44 +169,22 @@ export class AuthService {
   }
 
   /**
-   * Refresh token
-   * Accepts tokens that are expired within a 5-minute grace period
+   * Refresh token using long-lived refresh token
    */
-  async refreshToken(token: string): Promise<AuthResponse> {
+  async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
-      let payload: any;
+      console.log('🔄 AuthService: Attempting to refresh token');
+      console.log('🔑 AuthService: Refresh token (first 50 chars):', refreshToken.substring(0, 50) + '...');
       
-      // Try to verify token normally first
-      try {
-        payload = jwt.verify(token, config.jwt.secret as string, {
-          issuer: 'flowence',
-          audience: 'flowence-users'
-        }) as any;
-      } catch (error) {
-        // If token is expired, try to verify with grace period
-        if (error instanceof jwt.TokenExpiredError) {
-          console.log('⏰ Token expired, checking grace period...');
-          
-          // Decode without verification to check expiry time
-          const decoded = jwt.decode(token) as any;
-          if (!decoded || !decoded.exp) {
-            throw new Error('Invalid token format');
-          }
-          
-          const expiryTime = decoded.exp * 1000; // Convert to milliseconds
-          const now = Date.now();
-          const gracePeriod = 5 * 60 * 1000; // 5 minutes in milliseconds
-          
-          // Allow refresh if token expired within last 5 minutes
-          if (now - expiryTime > gracePeriod) {
-            throw new Error('Token expired beyond grace period');
-          }
-          
-          console.log('✅ Token within grace period, allowing refresh');
-          payload = decoded;
-        } else {
-          throw error;
-        }
+      // Verify the refresh token
+      const payload = jwt.verify(refreshToken, config.jwt.secret as string, {
+        issuer: 'flowence',
+        audience: 'flowence-users'
+      }) as any;
+
+      // Verify it's actually a refresh token
+      if (payload.type !== 'refresh') {
+        throw new Error('Invalid token type - expected refresh token');
       }
       
       // Get user with stores
@@ -211,25 +193,35 @@ export class AuthService {
         throw new Error('User not found');
       }
 
-      // Generate new token
-      const newToken = this.generateToken({
+      // Generate new access token and refresh token
+      const newAccessToken = this.generateToken({
         id: userWithStores.id,
         email: userWithStores.email,
         role: userWithStores.role
       });
 
-      console.log('🔄 Token refreshed successfully for user:', userWithStores.email);
+      const newRefreshToken = this.generateRefreshToken({
+        id: userWithStores.id,
+        email: userWithStores.email,
+        role: userWithStores.role
+      });
+
+      console.log('🔄 Tokens refreshed successfully for user:', userWithStores.email);
 
       // Return user profile (without password_hash)
       const { password_hash, ...userProfile } = userWithStores;
 
       return {
         user: userProfile,
-        token: newToken
+        token: newAccessToken,
+        refreshToken: newRefreshToken
       };
     } catch (error) {
       console.error('❌ Token refresh failed:', error);
-      throw new Error('Invalid or expired token');
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new Error('Refresh token expired - please login again');
+      }
+      throw new Error('Invalid refresh token');
     }
   }
 
@@ -243,17 +235,36 @@ export class AuthService {
   }
 
   /**
-   * Generate JWT token
+   * Generate JWT access token (short-lived)
    */
   private generateToken(user: { id: string; email: string; role: string }): string {
     const payload = {
       userId: user.id,
       email: user.email,
-      role: user.role
+      role: user.role,
+      type: 'access'
     };
 
     return jwt.sign(payload, config.jwt.secret as string, {
       expiresIn: '30m',
+      issuer: 'flowence',
+      audience: 'flowence-users'
+    });
+  }
+
+  /**
+   * Generate JWT refresh token (long-lived)
+   */
+  private generateRefreshToken(user: { id: string; email: string; role: string }): string {
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      type: 'refresh'
+    };
+
+    return jwt.sign(payload, config.jwt.secret as string, {
+      expiresIn: '7d', // 7 days for refresh token
       issuer: 'flowence',
       audience: 'flowence-users'
     });

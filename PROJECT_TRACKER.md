@@ -101,30 +101,57 @@
 **Nota:** SendGrid integration pendiente (opcional), invitaciones funcionan con URL manual.
 
 #### Sprint 2.2: Inventory Management - Part 1 (Week 5)
-- [ ] Product model with store association
-- [ ] Product CRUD operations
-- [ ] Product list with search and filters
-- [ ] Stock tracking per store
-- [ ] Product categories
+- [x] Product model with store association
+- [x] Product CRUD operations
+- [x] Product list with search and filters
+- [x] Stock tracking per store
+- [x] Product categories
 
 **Deliverables:**
-- [ ] Products are store-specific
-- [ ] Full CRUD for products
-- [ ] Search and filter functionality
-- [ ] Basic stock management
+- [x] Products are store-specific
+- [x] Full CRUD for products
+- [x] Search and filter functionality
+- [x] Basic stock management  
 
-#### Sprint 2.3: Inventory Management - Part 2 (Week 6)
-- [ ] Low stock alerts per store
-- [ ] Bulk product import
-- [ ] Product validation rules
-- [ ] Stock adjustment history
-- [ ] Product images
+#### Sprint 2.3: Advanced Stock Management & Role-Based Permissions (Week 6)
+**🎯 Goal:** Implement dual-stock system with role-based stock management
+
+**Core Features:**
+- [x] Dual stock system implementation
+  - [x] `stock_deposito`: Warehouse/storage stock (owner only)
+  - [x] `stock_venta`: Sales floor stock (all roles can view, employees can restock)
+- [x] Role-based stock permissions
+  - [x] Employee: Can only restock sales stock from warehouse stock
+  - [x] Owner: Full control over both stock types
+- [x] Stock operations
+  - [x] Restock operation (sales ← warehouse) 
+  - [x] Warehouse stock adjustments (owner only)
+  - [x] Low stock alerts for both stock types
+- [x] Enhanced stock management
+  - [x] Stock movement history/audit trail
+  - [x] Product validation rules
+  - [ ] Bulk stock adjustments (future enhancement)
+
+**Permission Matrix:**
+- **Employee (común):** 
+  - ✅ View both stocks
+  - ✅ Restock sales from warehouse (auto-deduct)
+  - ✅ Edit sales floor stock only
+  - ❌ Direct warehouse stock modification
+- **Owner (encargado):**
+  - ✅ Full warehouse stock management
+  - ✅ Fill/add warehouse stock
+  - ✅ Direct stock adjustments (both stocks)
+  - ✅ All employee permissions
 
 **Deliverables:**
-- [ ] Complete inventory management
-- [ ] Stock alerts working
-- [ ] Audit trail for changes
-- [ ] Product import functionality
+- [x] Dual stock database schema (migrations 009 & 010)
+- [x] Role-based stock API endpoints (7 endpoints)
+- [x] Stock movement audit system (`stock_movements` table)
+- [x] Enhanced inventory management UI (frontend updated)
+- [x] Stock operation validations (all implemented)
+
+**✅ Sprint 2.3 Status: COMPLETED** (Backend 100% + Frontend 100%)
 
 ### Phase 3: Sales & Scanner Integration (Weeks 7-9)
 **Goal:** Implement sales processing with barcode scanning

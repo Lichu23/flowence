@@ -79,7 +79,7 @@ export interface UserSession {
 export interface AuthResponse {
   user: UserProfile;
   token: string;
-  refresh_token?: string;
+  refreshToken: string;
 }
 
 export interface LoginCredentials {

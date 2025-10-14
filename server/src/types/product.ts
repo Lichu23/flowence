@@ -13,8 +13,12 @@ export interface Product {
   category?: string;
   price: number;
   cost: number;
-  stock: number;
-  min_stock: number;
+  stock: number; // Legacy field - will be deprecated
+  stock_deposito: number; // Warehouse/storage stock
+  stock_venta: number; // Sales floor stock
+  min_stock_deposito: number; // Minimum warehouse stock
+  min_stock_venta: number; // Minimum sales floor stock
+  min_stock: number; // Legacy field - will be deprecated
   unit: string;
   image_url?: string;
   is_active: boolean;
@@ -31,8 +35,12 @@ export interface CreateProductData {
   category?: string;
   price: number;
   cost: number;
-  stock: number;
-  min_stock?: number;
+  stock?: number; // Legacy field - optional for backward compatibility
+  stock_deposito: number; // Required: initial warehouse stock
+  stock_venta: number; // Required: initial sales floor stock
+  min_stock?: number; // Legacy field - optional for backward compatibility
+  min_stock_deposito?: number; // Minimum warehouse stock threshold
+  min_stock_venta?: number; // Minimum sales floor stock threshold
   unit?: string;
   image_url?: string;
   is_active?: boolean;
@@ -46,8 +54,12 @@ export interface UpdateProductData {
   category?: string;
   price?: number;
   cost?: number;
-  stock?: number;
-  min_stock?: number;
+  stock?: number; // Legacy field - optional for backward compatibility
+  stock_deposito?: number; // Warehouse stock update
+  stock_venta?: number; // Sales floor stock update
+  min_stock?: number; // Legacy field - optional for backward compatibility
+  min_stock_deposito?: number; // Minimum warehouse stock threshold
+  min_stock_venta?: number; // Minimum sales floor stock threshold
   unit?: string;
   image_url?: string;
   is_active?: boolean;
@@ -82,4 +94,44 @@ export interface ProductListResponse {
     pages: number;
   };
   stats: ProductStats;
+}
+
+// Stock operation interfaces
+export interface RestockOperation {
+  product_id: string;
+  quantity: number; // Amount to move from warehouse to sales floor
+  performed_by: string; // User ID who performed the operation
+  notes?: string;
+}
+
+export interface StockAdjustment {
+  product_id: string;
+  stock_type: 'deposito' | 'venta'; // Which stock to adjust
+  adjustment_type: 'increase' | 'decrease' | 'set'; // Type of adjustment
+  quantity: number; // Amount to adjust (or new value for 'set')
+  reason: string; // Reason for adjustment (required)
+  performed_by: string; // User ID who performed the operation
+  notes?: string;
+}
+
+export interface StockMovement {
+  id: string;
+  product_id: string;
+  store_id: string;
+  movement_type: 'restock' | 'adjustment' | 'sale' | 'return';
+  stock_type: 'deposito' | 'venta';
+  quantity_change: number; // Positive for increase, negative for decrease
+  quantity_before: number;
+  quantity_after: number;
+  reason: string;
+  performed_by: string;
+  notes?: string; // Optional field
+  created_at: Date;
+}
+
+export interface StockOperationResult {
+  success: boolean;
+  movement_id?: string;
+  updated_product: Product;
+  message: string;
 }
