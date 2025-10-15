@@ -52,9 +52,9 @@ export class SaleService {
       });
     }
 
-    // Tax rate from store
+    // Tax rate from store (stored as percentage, e.g., 16.00 for 16%)
     const store = await this.storeModel.findById(store_id);
-    const taxRate = store?.tax_rate ? Number(store.tax_rate) : 0;
+    const taxRate = store?.tax_rate ? Number(store.tax_rate) / 100 : 0;
     const tax = subtotal * taxRate;
     const total = subtotal + tax - discount;
 

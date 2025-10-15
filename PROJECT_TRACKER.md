@@ -153,34 +153,59 @@
 
 **✅ Sprint 2.3 Status: COMPLETED** (Backend 100% + Frontend 100%)
 
-### Phase 3: Sales & Scanner Integration (Weeks 7-9)
+### Phase 3: Sales & Scanner Integration (Weeks 7-9) ⚡ EN PROGRESO (66% Completado)
 **Goal:** Implement sales processing with barcode scanning
 
-#### Sprint 3.1: Scanner Integration (Week 7)
-- [ ] QuaggaJS integration
-- [ ] Barcode scanning functionality
-- [ ] Manual product entry fallback
-- [ ] Product search by barcode
-- [ ] Scanner configuration per store
+**Status:** Sprint 3.1 ✅ | Sprint 3.2 ✅ | Sprint 3.3 ⏳ Pendiente
+
+#### Sprint 3.1: Scanner Integration (Week 7) ✅ COMPLETADO (integrado en 3.2)
+- [x] QuaggaJS integration
+- [x] Barcode scanning functionality
+- [x] Manual product entry fallback
+- [x] Product search by barcode
+- [x] Scanner configuration per store
 
 **Deliverables:**
-- [ ] Working barcode scanner
-- [ ] Product lookup by barcode
-- [ ] Manual entry alternative
-- [ ] Scanner works on mobile/tablet
+- [x] Working barcode scanner
+- [x] Product lookup by barcode
+- [x] Manual entry alternative
+- [x] Scanner works on mobile/tablet
 
-#### Sprint 3.2: Sales Processing - Part 1 (Week 8)
-- [ ] Shopping cart functionality
-- [ ] Cart state management
-- [ ] Tax calculations per store
-- [ ] Payment method selection
-- [ ] Cash payment processing
+**✅ Sprint 3.1 Status: COMPLETED** (Integrado en Sprint 3.2)
+
+#### Sprint 3.2: POS & Sales System (Week 8) ✅ COMPLETADO
+- [x] POS (Point of Sale) page for employees
+- [x] Shopping cart functionality (Context API)
+- [x] Cart state management (add/remove/update)
+- [x] Product search (manual + barcode scanner)
+- [x] QuaggaJS barcode scanner integration
+- [x] Scanner modal with dual mode (camera + manual)
+- [x] Tax calculations per store (fixed calculation bug)
+- [x] Payment method: Cash processing
+- [x] Cash payment modal with change calculation
+- [x] Stock validation before sale
+- [x] Dual stock system (descuenta de stock_venta)
+- [x] Sales database structure (sales + sale_items)
+- [x] Stock movements tracking
+- [x] Receipt number generation
+- [x] Refresh token system (90 días, no expira en venta)
+- [x] Role-based routing (Dashboard solo owners)
+- [x] Responsive design (mobile/tablet optimizado)
+- [x] Debugging logs en scanner
 
 **Deliverables:**
-- [ ] Full shopping cart implementation
-- [ ] Store-specific tax rates
-- [ ] Cash payment flow
-- [ ] Cart persistence
+- [x] POS page functional para empleados
+- [x] Barcode scanner integrado (QuaggaJS)
+- [x] Shopping cart completo con Context API
+- [x] Store-specific tax rates (16% corregido)
+- [x] Cash payment flow completo
+- [x] Stock se descuenta de stock_venta automáticamente
+- [x] Ventas guardadas en BD correctamente
+- [x] Refresh tokens persistentes sin interrupciones
+- [x] Modal de pago responsive y optimizado
+- [x] Sistema de logs para debugging
+
+**✅ Sprint 3.2 Status: COMPLETED** (Backend 100% + Frontend 100%)
 
 #### Sprint 3.3: Sales Processing - Part 2 (Week 9)
 - [ ] Stripe payment integration

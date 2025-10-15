@@ -1,6 +1,7 @@
 import { ProductModel } from '../models/ProductModel';
 import { UserModel } from '../models/UserModel';
 import { UserStoreModel } from '../models/UserStoreModel';
+import { SaleModel } from '../models/SaleModel';
 import { Product } from '../types/product';
 
 export interface DashboardStats {
@@ -26,6 +27,7 @@ export class DashboardService {
   private static productModel = new ProductModel();
   private static userModel = new UserModel();
   private static userStoreModel = new UserStoreModel();
+  private static saleModel = new SaleModel();
 
   /**
    * Get dashboard statistics based on user role
@@ -95,10 +97,20 @@ export class DashboardService {
           }));
       }
 
-      // TODO: Implement sales and revenue when sales module is ready
-      // For now, these will remain 0
-      stats.totalSales = 0;
-      stats.revenue = 0;
+      // Get sales statistics for the store
+      const salesResult = await this.saleModel.list({
+        store_id: storeId,
+        page: 1,
+        limit: 1000, // Get all sales to calculate totals
+        payment_status: 'completed' // Only count completed sales
+      });
+
+      stats.totalSales = salesResult.total || 0;
+      
+      // Calculate total revenue from completed sales
+      stats.revenue = salesResult.sales.reduce((total: number, sale: any) => {
+        return total + parseFloat(sale.total || 0);
+      }, 0);
 
       return stats;
     } catch (error) {

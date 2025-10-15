@@ -340,6 +340,9 @@ export class AuthController {
     try {
       console.log('🚪 AuthController: Logout request received');
       
+      // Get refresh token from body (optional)
+      const { refreshToken } = req.body;
+      
       // Try to get user from token, but don't fail if token is invalid
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -352,7 +355,8 @@ export class AuthController {
           
           if (decoded && decoded.userId) {
             console.log('👤 AuthController: Logging out user:', decoded.userId);
-            await this.authService.logout(decoded.userId);
+            // Revoke the specific refresh token if provided, otherwise revoke all
+            await this.authService.logout(decoded.userId, refreshToken);
           }
         } catch (tokenError) {
           console.log('⚠️ AuthController: Invalid token for logout, but continuing...');
