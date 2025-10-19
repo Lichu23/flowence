@@ -11,6 +11,14 @@ export interface Store {
   currency: string;
   tax_rate: number;
   low_stock_threshold: number;
+  timezone?: string;
+  date_format?: string;
+  time_format?: string;
+  receipt_header?: string;
+  receipt_footer?: string;
+  logo_url?: string;
+  primary_color?: string;
+  secondary_color?: string;
   created_at: string;
   updated_at: string;
 }
@@ -31,7 +39,12 @@ export interface UpdateStoreData {
   phone?: string;
   currency?: string;
   tax_rate?: number;
-  low_stock_threshold?: number;
+  timezone?: string;
+  date_format?: string;
+  time_format?: string;
+  receipt_header?: string;
+  receipt_footer?: string;
+  logo_url?: string;
 }
 
 export interface StoreWithOwner extends Store {

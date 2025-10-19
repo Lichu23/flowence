@@ -17,6 +17,7 @@ import dashboardRoutes from './routes/dashboard';
 import stockRoutes from './routes/stock';
 import scannerRoutes from './routes/scanner';
 import salesRoutes from './routes/sales';
+import paymentRoutes from './routes/payments';
 
 const app: Application = express();
 
@@ -151,6 +152,12 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api', stockRoutes);
 app.use('/api', scannerRoutes);
 app.use('/api', salesRoutes);
+app.use('/api/stores', paymentRoutes);
+
+// Debug: Log all registered routes
+console.log('🔧 Registered payment routes:');
+console.log('  POST /api/stores/:storeId/payments/intents');
+console.log('  POST /api/stores/:storeId/payments/confirm');
 
 // 404 handler
 app.use(notFoundHandler);

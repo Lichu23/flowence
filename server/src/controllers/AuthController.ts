@@ -228,11 +228,17 @@ export class AuthController {
         return;
       }
 
-      res.status(500).json({
+      // For other errors, check if it's an authentication-related error
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      const isAuthError = errorMessage.toLowerCase().includes('password') || 
+                          errorMessage.toLowerCase().includes('email') ||
+                          errorMessage.toLowerCase().includes('invalid');
+
+      res.status(isAuthError ? 401 : 500).json({
         success: false,
         error: {
-          code: 'LOGIN_FAILED',
-          message: 'Login failed'
+          code: isAuthError ? 'AUTHENTICATION_FAILED' : 'LOGIN_FAILED',
+          message: errorMessage
         },
         timestamp: new Date().toISOString()
       });

@@ -15,7 +15,7 @@ export class SaleService {
     return `REC-${year}-${String(next).padStart(6, '0')}`;
   }
 
-  async processSale(req: CreateSaleRequest, userId: string): Promise<Sale & { items: SaleItem[] }> {
+  async processSale(req: CreateSaleRequest, userId: string, requirePaymentConfirmation: boolean = false): Promise<Sale & { items: SaleItem[] }> {
     const { store_id, items, payment_method, discount = 0, notes } = req;
     if (!items || items.length === 0) throw new Error('Sale must contain at least one item');
 
@@ -68,15 +68,79 @@ export class SaleService {
       discount,
       total,
       payment_method,
-      payment_status: 'completed' as const,
+      payment_status: requirePaymentConfirmation ? 'pending' as const : 'completed' as const,
       receipt_number,
       notes
     };
 
     const { sale, items: createdItems } = await this.saleModel.createSale(saleData as any, preparedItems);
 
-    // Update stock and record movements
-    for (const item of createdItems) {
+    // Only update stock if payment is confirmed (not pending)
+    if (!requirePaymentConfirmation) {
+      // Update stock and record movements
+      for (const item of createdItems) {
+        const product = await this.productModel.findById(item.product_id, sale.store_id);
+        if (!product) continue;
+        const stockField = item.stock_type === 'venta' ? 'stock_venta' : 'stock_deposito';
+        const before = (product as any)[stockField] || 0;
+        const after = before - item.quantity;
+        if (after < 0) throw new Error(`Stock negative for ${product.name}`);
+
+        // Persist new stock
+        await (this as any).productModel['supabase']
+          .from('products')
+          .update({ [stockField]: after })
+          .eq('id', item.product_id)
+          .eq('store_id', sale.store_id);
+
+        // Record movement
+        await (this as any).productModel['supabase']
+          .from('stock_movements')
+          .insert({
+            product_id: item.product_id,
+            store_id: sale.store_id,
+            movement_type: 'sale',
+            stock_type: item.stock_type,
+            quantity_change: -item.quantity,
+            quantity_before: before,
+            quantity_after: after,
+            reason: `Sale ${sale.receipt_number}`,
+            performed_by: sale.user_id,
+            notes: null
+          });
+      }
+    }
+
+    return { ...(sale as any), items: createdItems };
+  }
+
+  async confirmPendingSale(saleId: string, storeId: string): Promise<Sale & { items: SaleItem[] }> {
+    // Get the pending sale
+    const existing = await this.saleModel.findById(saleId, storeId);
+    if (!existing) throw new Error('Sale not found');
+    const { sale, items } = existing;
+    
+    if (sale.payment_status !== 'pending') {
+      throw new Error('Sale is not in pending status');
+    }
+
+    // Update sale status to completed
+    const { data: updatedSaleRows, error: updErr } = await (this as any).saleModel['supabase']
+      .from('sales')
+      .update({ payment_status: 'completed' })
+      .eq('id', saleId)
+      .eq('store_id', storeId)
+      .select('*')
+      .limit(1);
+    
+    if (updErr || !updatedSaleRows || updatedSaleRows.length === 0) {
+      throw new Error('Failed to update sale status');
+    }
+
+    const updatedSale = updatedSaleRows[0] as Sale;
+
+    // Now update stock and record movements
+    for (const item of items) {
       const product = await this.productModel.findById(item.product_id, sale.store_id);
       if (!product) continue;
       const stockField = item.stock_type === 'venta' ? 'stock_venta' : 'stock_deposito';
@@ -108,7 +172,58 @@ export class SaleService {
         });
     }
 
-    return { ...(sale as any), items: createdItems };
+    return { ...updatedSale, items };
+  }
+
+  async refundSale(saleId: string, storeId: string, userId: string): Promise<{ sale: Sale; items: SaleItem[] }> {
+    const existing = await this.saleModel.findById(saleId, storeId);
+    if (!existing) throw new Error('Sale not found');
+    const { sale, items } = existing;
+    if (sale.payment_status === 'refunded') throw new Error('Sale already refunded');
+
+    // Reverse stock for each item
+    for (const item of items) {
+      const product = await this.productModel.findById(item.product_id, storeId);
+      if (!product) continue;
+      const stockField = item.stock_type === 'venta' ? 'stock_venta' : 'stock_deposito';
+      const before = (product as any)[stockField] || 0;
+      const after = before + item.quantity;
+
+      await (this as any).productModel['supabase']
+        .from('products')
+        .update({ [stockField]: after })
+        .eq('id', item.product_id)
+        .eq('store_id', storeId);
+
+      await (this as any).productModel['supabase']
+        .from('stock_movements')
+        .insert({
+          product_id: item.product_id,
+          store_id: storeId,
+          movement_type: 'return',
+          stock_type: item.stock_type,
+          quantity_change: item.quantity,
+          quantity_before: before,
+          quantity_after: after,
+          reason: `Return ${sale.receipt_number}`,
+          performed_by: userId,
+          notes: null,
+        });
+    }
+
+    // Update sale status to refunded
+    const { data: updatedSaleRows, error: updErr } = await (this as any).saleModel['supabase']
+      .from('sales')
+      .update({ payment_status: 'refunded' })
+      .eq('id', saleId)
+      .eq('store_id', storeId)
+      .select('*')
+      .limit(1);
+    if (updErr || !updatedSaleRows || updatedSaleRows.length === 0) {
+      throw new Error('Failed to update sale status');
+    }
+
+    return { sale: updatedSaleRows[0] as Sale, items };
   }
 }
 

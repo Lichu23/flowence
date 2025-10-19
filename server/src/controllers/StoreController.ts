@@ -254,7 +254,12 @@ export class StoreController {
         phone: req.body.phone,
         currency: req.body.currency,
         tax_rate: req.body.tax_rate,
-        low_stock_threshold: req.body.low_stock_threshold
+        timezone: req.body.timezone,
+        date_format: req.body.date_format,
+        time_format: req.body.time_format,
+        receipt_header: req.body.receipt_header,
+        receipt_footer: req.body.receipt_footer,
+        logo_url: req.body.logo_url
       };
 
       // Remove undefined values
