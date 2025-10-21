@@ -139,6 +139,34 @@ export class SaleController {
       res.status(400).json({ success: false, error: { code: 'REFUND_FAILED', message: error instanceof Error ? error.message : 'Failed to refund sale' }, timestamp: new Date().toISOString() });
     }
   }
+
+  async returnsSummary(req: any, res: Response): Promise<void> {
+    try {
+      const storeId = req.params.storeId as string;
+      const saleId = req.params.saleId as string;
+      const summary = await this.saleService.getReturnsSummary(saleId, storeId);
+      res.json({ success: true, data: summary, timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(400).json({ success: false, error: { code: 'RETURNS_SUMMARY_FAILED', message: error instanceof Error ? error.message : 'Failed to get returns summary' }, timestamp: new Date().toISOString() });
+    }
+  }
+
+  async returnItemsBatch(req: any, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id || req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' }, timestamp: new Date().toISOString() });
+        return;
+      }
+      const storeId = req.params.storeId as string;
+      const saleId = req.params.saleId as string;
+      const items = req.body?.items as Array<{ sale_item_id: string; product_id: string; stock_type: 'venta' | 'deposito'; quantity: number; return_type: 'defective' | 'customer_mistake' }>;
+      const result = await this.saleService.returnItemsBatch(saleId, storeId, userId, items);
+      res.json({ success: true, data: result, message: 'Items returned', timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(400).json({ success: false, error: { code: 'RETURNS_BATCH_FAILED', message: error instanceof Error ? error.message : 'Failed to return items' }, timestamp: new Date().toISOString() });
+    }
+  }
 }
 
 

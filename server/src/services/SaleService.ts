@@ -225,6 +225,121 @@ export class SaleService {
 
     return { sale: updatedSaleRows[0] as Sale, items };
   }
+
+  async getReturnsSummary(saleId: string, storeId: string): Promise<{ items: Array<{ sale_item: SaleItem; returned_quantity: number; remaining_quantity: number; stock_current: number }> }> {
+    const existing = await this.saleModel.findById(saleId, storeId);
+    if (!existing) throw new Error('Sale not found');
+    const { sale, items } = existing;
+
+    const receipt = sale.receipt_number;
+
+    // Fetch stock movements for this sale's returns (linked by sale_id)
+    const { data: movements, error: movErr } = await (this as any).productModel['supabase']
+      .from('stock_movements')
+      .select('product_id, stock_type, quantity_change, reason')
+      .eq('store_id', storeId)
+      .eq('movement_type', 'return')
+      .eq('sale_id', saleId);
+    if (movErr) throw new Error('Failed to load returns summary');
+
+    const returnedByKey = new Map<string, number>();
+    for (const m of movements || []) {
+      const key = `${m.product_id}:${m.stock_type}`;
+      const prev = returnedByKey.get(key) || 0;
+      returnedByKey.set(key, prev + Number(m.quantity_change || 0));
+    }
+
+    const summaryItems = await Promise.all(items.map(async (it) => {
+      const key = `${it.product_id}:${it.stock_type}`;
+      const returned = returnedByKey.get(key) || 0;
+      const remaining = Math.max(0, Number(it.quantity) - Number(returned));
+      const product = await this.productModel.findById(it.product_id, storeId);
+      const stockField = it.stock_type === 'venta' ? 'stock_venta' : 'stock_deposito';
+      const stock_current = product ? Number((product as any)[stockField] || 0) : 0;
+      return { sale_item: it, returned_quantity: returned, remaining_quantity: remaining, stock_current };
+    }));
+
+    return { items: summaryItems };
+  }
+
+  async returnItemsBatch(
+    saleId: string,
+    storeId: string,
+    userId: string,
+    items: Array<{ sale_item_id: string; product_id: string; stock_type: 'venta' | 'deposito'; quantity: number; return_type: 'defective' | 'customer_mistake' }>
+  ): Promise<{ processed: Array<{ sale_item_id: string; quantity: number; return_type: string }>; summary: { items: Array<{ sale_item: SaleItem; returned_quantity: number; remaining_quantity: number; stock_current: number }> } }>{
+    if (!items || items.length === 0) throw new Error('No items to return');
+
+    const existing = await this.saleModel.findById(saleId, storeId);
+    if (!existing) throw new Error('Sale not found');
+    const { sale, items: saleItems } = existing;
+
+    // Build quick lookup
+    const byId = new Map<string, SaleItem>(saleItems.map((it) => [it.id, it]));
+
+    // Get current returns summary to validate remaining quantities
+    const currentSummary = await this.getReturnsSummary(saleId, storeId);
+    const remainingByKey = new Map<string, number>();
+    for (const s of currentSummary.items) {
+      const key = `${s.sale_item.product_id}:${s.sale_item.stock_type}`;
+      remainingByKey.set(key, s.remaining_quantity);
+    }
+
+    const processed: Array<{ sale_item_id: string; quantity: number; return_type: string }> = [];
+
+    for (const req of items) {
+      const si = byId.get(req.sale_item_id);
+      if (!si || si.product_id !== req.product_id || si.stock_type !== req.stock_type) {
+        throw new Error('Invalid sale item in return request');
+      }
+      if (req.quantity <= 0) throw new Error('Return quantity must be positive');
+      const key = `${req.product_id}:${req.stock_type}`;
+      const remaining = remainingByKey.get(key) ?? Math.max(0, Number(si.quantity));
+      if (req.quantity > remaining) throw new Error(`Return quantity exceeds remaining for ${si.product_name}`);
+
+      const product = await this.productModel.findById(req.product_id, storeId);
+      if (!product) throw new Error('Product not found');
+
+      const stockField = req.stock_type === 'venta' ? 'stock_venta' : 'stock_deposito';
+      const before = (product as any)[stockField] || 0;
+      let after = before;
+
+      // For customer mistake, add back to stock; for defective, do not update stock
+      if (req.return_type === 'customer_mistake') {
+        after = before + req.quantity;
+        await (this as any).productModel['supabase']
+          .from('products')
+          .update({ [stockField]: after })
+          .eq('id', req.product_id)
+          .eq('store_id', storeId);
+      }
+
+      // Record movement with quantity_change for both types to prevent double returns
+      await (this as any).productModel['supabase']
+        .from('stock_movements')
+        .insert({
+          product_id: req.product_id,
+          store_id: storeId,
+          movement_type: 'return',
+          stock_type: req.stock_type,
+          quantity_change: req.quantity,
+          quantity_before: before,
+          quantity_after: after,
+          reason: `Return ${sale.receipt_number} (${req.return_type})`,
+          sale_id: sale.id,
+          performed_by: userId,
+          notes: req.return_type === 'defective' ? 'Defective item excluded from inventory' : null
+        });
+
+      processed.push({ sale_item_id: req.sale_item_id, quantity: req.quantity, return_type: req.return_type });
+
+      // Update remaining for validation in same batch
+      remainingByKey.set(key, (remainingByKey.get(key) || remaining) - req.quantity);
+    }
+
+    const summary = await this.getReturnsSummary(saleId, storeId);
+    return { processed, summary };
+  }
 }
 
 
