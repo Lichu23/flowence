@@ -14,4 +14,10 @@ router.get('/stats/:storeId', authenticate, validateStoreAccess, DashboardContro
 // Get inventory stats for all owned stores (owners only)
 router.get('/stores-inventory', authenticate, DashboardController.getOwnerStoresInventory);
 
+// Get defective products for a store
+router.get('/defective-products/:storeId', authenticate, validateStoreAccess, DashboardController.getDefectiveProducts);
+
+// Get global summary for all owned stores (owners only)
+router.get('/global-summary', authenticate, DashboardController.getGlobalSummary);
+
 export default router;

@@ -30,7 +30,12 @@ export const authenticate: RequestHandler = async (
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
+    console.log('🔐 Auth middleware - Path:', req.path);
+    console.log('🔐 Auth middleware - Auth header present:', !!authHeader);
+    console.log('🔐 Auth middleware - Token present:', !!token);
+
     if (!token) {
+      console.log('❌ Auth middleware - No token provided');
       res.status(401).json({
         success: false,
         error: {
@@ -42,11 +47,15 @@ export const authenticate: RequestHandler = async (
       return;
     }
 
+    console.log('🔐 Auth middleware - Token (first 20 chars):', token.substring(0, 20) + '...');
+
     // Verify token
     const payload = jwt.verify(token, config.jwt.secret as string, {
       issuer: 'flowence',
       audience: 'flowence-users'
     }) as JwtPayload;
+
+    console.log('✅ Auth middleware - Token verified, userId:', payload.userId);
 
     // Get user from database
     const user = await userModel.findById(payload.userId);

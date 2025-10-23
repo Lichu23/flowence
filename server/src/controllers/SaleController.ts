@@ -167,6 +167,15 @@ export class SaleController {
       res.status(400).json({ success: false, error: { code: 'RETURNS_BATCH_FAILED', message: error instanceof Error ? error.message : 'Failed to return items' }, timestamp: new Date().toISOString() });
     }
   }
+
+  async getReturnedProducts(req: any, res: Response): Promise<void> {
+    try {
+      const storeId = req.params.storeId as string;
+      const saleId = req.params.saleId as string;
+      const result = await this.saleService.getReturnedProducts(saleId, storeId);
+      res.json({ success: true, data: result, timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(400).json({ success: false, error: { code: 'RETURNED_PRODUCTS_FAILED', message: error instanceof Error ? error.message : 'Failed to get returned products' }, timestamp: new Date().toISOString() });
+    }
+  }
 }
-
-

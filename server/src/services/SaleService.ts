@@ -229,9 +229,8 @@ export class SaleService {
   async getReturnsSummary(saleId: string, storeId: string): Promise<{ items: Array<{ sale_item: SaleItem; returned_quantity: number; remaining_quantity: number; stock_current: number }> }> {
     const existing = await this.saleModel.findById(saleId, storeId);
     if (!existing) throw new Error('Sale not found');
-    const { sale, items } = existing;
-
-    const receipt = sale.receipt_number;
+    // const { sale, items } = existing;
+    const { items } = existing;
 
     // Fetch stock movements for this sale's returns (linked by sale_id)
     const { data: movements, error: movErr } = await (this as any).productModel['supabase']
@@ -338,8 +337,55 @@ export class SaleService {
     }
 
     const summary = await this.getReturnsSummary(saleId, storeId);
+    
+    // Check if all items have been fully returned
+    const allFullyReturned = summary.items.every(item => item.remaining_quantity === 0);
+    
+    // Update sale status to 'refunded' if all items are fully returned
+    if (allFullyReturned && sale.payment_status !== 'refunded') {
+      await (this as any).saleModel['supabase']
+        .from('sales')
+        .update({ payment_status: 'refunded' })
+        .eq('id', saleId)
+        .eq('store_id', storeId);
+    }
+    
     return { processed, summary };
   }
+
+  async getReturnedProducts(saleId: string, storeId: string): Promise<{ returns: Array<{ product_id: string; product_name: string; quantity: number; return_date: string; return_type: 'defective' | 'customer_mistake' }> }> {
+    const existing = await this.saleModel.findById(saleId, storeId);
+    if (!existing) throw new Error('Sale not found');
+
+    // Fetch stock movements for this sale's returns
+    const { data: movements, error: movErr } = await (this as any).productModel['supabase']
+      .from('stock_movements')
+      .select('product_id, quantity_change, created_at, reason, notes')
+      .eq('store_id', storeId)
+      .eq('movement_type', 'return')
+      .eq('sale_id', saleId)
+      .order('created_at', { ascending: false });
+    
+    if (movErr) throw new Error('Failed to load returned products');
+
+    const returns: Array<{ product_id: string; product_name: string; quantity: number; return_date: string; return_type: 'defective' | 'customer_mistake' }> = [];
+
+    for (const m of movements || []) {
+      const product = await this.productModel.findById(m.product_id, storeId);
+      if (!product) continue;
+
+      // Determine return type from reason or notes
+      const returnType = m.reason?.includes('defective') || m.notes?.includes('Defective') ? 'defective' : 'customer_mistake';
+
+      returns.push({
+        product_id: m.product_id,
+        product_name: product.name,
+        quantity: Number(m.quantity_change || 0),
+        return_date: m.created_at,
+        return_type: returnType
+      });
+    }
+
+    return { returns };
+  }
 }
-
-

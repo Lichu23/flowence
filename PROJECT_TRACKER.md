@@ -282,7 +282,93 @@
 - [ ] Performance benchmarks met (pending)
 - [ ] Security vulnerabilities addressed (pending)
 
-#### Sprint 5.2: Deployment (Week 13)
+#### Sprint 5.2: Details, Metrics, and Global Dashboard ✅ COMPLETED
+- [x] **Details Section**
+- [x] Allow returns in two ways:
+- [x] Return all.
+- [x] Return by individual item (for *owner* and *employee*).
+- [x] Remove the “Return” button in the *Sales* section and move it to *Details*.
+- [x] Ensure all returns are managed solely from *Details*.
+- [x] Hide current stock in *Details* (already managed internally; not visible to employees or owners).
+
+- [x] **Dashboard**
+- [x] Add a new section with a *card* showing the **total number of defective products**.
+- [x] Make the card interactive to access a view/list of specific defective items.
+
+- [x] **Per-store metrics**
+- [x] Modify the “Inventory Value” → **“Expenses [Month]” card (show the month name next to the title).
+- [x] Calculate the value as the **sum of all products purchased during that month** (monthly expenses).
+- [x] Maintain **revenue** and **total sales** metrics, ensuring they are **separated by month**.
+
+- [x] **Global summary metrics**
+- Display only:
+- [x] Display the **total number of employees** (adding all stores).
+- [x] Calculate **total profit**:
+- [x] [Total profit = Total revenue − Total expenses]
+- [x] Make the **“Total profit”** card interactive:
+- [x] When clicked, show individual cards per store.
+- [x] Each card must include:
+- [x] Store name
+- [x] Month and year
+- [x] Total expenses for the month
+- [x] Total revenue for the month
+
+**Deliverables:**
+- [x] Centralized returns system in *Details*
+- [x] Internal stock masking
+- [x] Interactive card for defective products
+- [x] Separate expense, revenue, and sales metrics by month
+- [x] Global summary with total profit and monthly breakdown by store
+
+#### Sprint Fix: Enhancements to the Sales and Product Management System ✅ COMPLETED (100%)
+- [x] Adjust employee management
+  - [x] Modify calculation to exclude owner from total employee count
+  - [x] Verify correct implementation of logic
+- [x] Correct total expenses calculation
+  - [x] Ensure monthly expenses unaffected by purchases (reflected as expense, not deducted)
+  - [x] Verify total expenses remain unchanged with returns
+- [x] Implement profit discount for product returns
+  - [x] Add logic to deduct profits for full or partial returns
+  - [x] Ensure profits reflect loss from returned products
+  - [x] Validate profit calculation after returns
+- [x] Manage defective products
+  - [x] Display monetary value of losses from defective products
+  - [x] Include amount for each defective product in list
+  - [x] Verify correct display in report
+- [x] Implement currency format for total payment
+  - [x] Apply currency format for card payments based on store configuration
+  - [x] Validate correct display in selected currency
+- [x] Update sales status
+  - [x] Change status to "Refund" for full returns instead of "Completed"
+  - [x] Verify correct status update based on return
+- [x] Display returned products in sale details
+  - [x] Include quantity, name, return date, and type ("customer error" or "defective")
+  - [x] Ensure clear and separate display from non-returned products
+
+**Deliverables:**
+- [x] Logic excluding owner from employee count
+- [x] Corrected monthly total expenses calculation
+- [x] Profit deduction for returns implemented
+- [x] Loss information for defective products added
+- [x] Total card payment with correct currency format
+- [x] Sales status updated to "Refund" for full returns
+- [x] Sale details with returned products correctly recorded
+
+#### **Sprint 5.3: Ticket System**
+
+* [ ] Agregar código de barras al ticket de venta para identificar la compra mediante su ID
+* [ ] Implementar escaneo del código del ticket de pago para recuperar detalles de la venta
+* [ ] Agregar input para filtrar ventas por número o código de ticket
+* [ ] Implementar envío real de invitaciones por email con URL única de acceso para empleados
+
+**Deliverables:**
+
+* [ ] Tickets de venta con código de barras funcional
+* [ ] Escaneo y filtrado de tickets operativo
+* [ ] Sistema de invitación por correo activo
+* [ ] Documentación actualizada
+
+#### Sprint 5.4: Deployment
 - [ ] Production environment setup
 - [ ] CI/CD pipeline
 - [ ] Database migrations
@@ -294,6 +380,13 @@
 - [ ] Monitoring in place
 - [ ] Backup system working
 - [ ] Documentation complete
+
+Perfecto, aquí tienes tu texto adaptado al formato solicitado:
+
+---
+
+
+
 
 ## Data Model Changes for Multi-Store
 

@@ -10,8 +10,12 @@ export interface DashboardStats {
   revenue: number;
   employees: number;
   lowStockProducts?: number; // Only for owners
-  totalValue?: number; // Only for owners
+  totalValue?: number; // Only for owners (deprecated, use monthlyExpenses)
   recentProducts?: any[]; // Only for owners
+  monthlyExpenses?: number; // Monthly product purchases (cost × quantity)
+  monthlySales?: number; // Sales count for current month
+  monthlyRevenue?: number; // Revenue for current month
+  currentMonth?: string; // e.g., "Octubre 2025"
 }
 
 export interface StoreInventoryStats {
@@ -54,9 +58,9 @@ export class DashboardService {
 
       stats.totalProducts = productsResult.pagination.total || 0;
 
-      // Get employees count for the store
+      // Get employees count for the store (excluding owners)
       const employees = await this.userModel.findByStore(storeId);
-      stats.employees = employees.length;
+      stats.employees = employees.filter(emp => emp.role === 'employee').length;
 
       // Owner gets additional metrics
       if (userRole === 'owner') {
@@ -70,7 +74,7 @@ export class DashboardService {
 
         const products = (allProductsResult.products || []) as Product[];
         
-        // Calculate total inventory value using dual stock
+        // Calculate total inventory value using dual stock (kept for backward compatibility)
         stats.totalValue = products.reduce((total: number, product: Product) => {
           const warehouseValue = (product.cost * (product.stock_deposito || 0));
           const salesValue = (product.cost * (product.stock_venta || 0));
@@ -95,6 +99,18 @@ export class DashboardService {
             price: product.price,
             created_at: product.created_at
           }));
+
+        // Calculate monthly expenses (products purchased this month)
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        stats.currentMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
+        const productsThisMonth = products.filter((p: Product) => new Date(p.created_at) >= startOfMonth);
+        stats.monthlyExpenses = productsThisMonth.reduce((total: number, product: Product) => {
+          const totalStock = (product.stock_deposito || 0) + (product.stock_venta || 0);
+          return total + (product.cost * totalStock);
+        }, 0);
       }
 
       // Get sales statistics for the store
@@ -111,6 +127,17 @@ export class DashboardService {
       stats.revenue = salesResult.sales.reduce((total: number, sale: any) => {
         return total + parseFloat(sale.total || 0);
       }, 0);
+
+      // Calculate monthly sales and revenue
+      if (userRole === 'owner') {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthlySalesData = salesResult.sales.filter((sale: any) => new Date(sale.created_at) >= startOfMonth);
+        stats.monthlySales = monthlySalesData.length;
+        stats.monthlyRevenue = monthlySalesData.reduce((total: number, sale: any) => {
+          return total + parseFloat(sale.total || 0);
+        }, 0);
+      }
 
       return stats;
     } catch (error) {
@@ -159,7 +186,7 @@ export class DashboardService {
           return isLowWarehouse || isLowSales;
         }).length;
 
-        // Get employees count for this store
+        // Get employees count for this store (excluding owners)
         const employees = await this.userModel.findByStore(store.id);
 
         storesStats.push({
@@ -168,13 +195,185 @@ export class DashboardService {
           totalProducts: productsResult.pagination.total || 0,
           totalValue,
           lowStockProducts,
-          employees: employees.length
+          employees: employees.filter(emp => emp.role === 'employee').length
         });
       }
 
       return storesStats;
     } catch (error) {
       console.error('DashboardService.getOwnerStoresInventoryStats error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get defective products for a store
+   * Returns products that have been returned as defective with monetary value
+   */
+  static async getDefectiveProducts(storeId: string): Promise<{ products: Array<{ product_id: string; product_name: string; total_defective: number; last_return_date: string; monetary_loss: number }> }> {
+    try {
+      // Query stock_movements for defective returns
+      const { data: movements, error } = await (this.productModel as any)['supabase']
+        .from('stock_movements')
+        .select('product_id, quantity_change, created_at, reason')
+        .eq('store_id', storeId)
+        .eq('movement_type', 'return')
+        .like('reason', '%defective%')
+        .order('created_at', { ascending: false });
+
+      if (error) throw new Error('Failed to fetch defective products');
+
+      // Aggregate by product_id
+      const byProduct = new Map<string, { total: number; lastDate: string }>();
+      for (const m of movements || []) {
+        const existing = byProduct.get(m.product_id);
+        const qty = Number(m.quantity_change || 0);
+        const date = m.created_at;
+        if (!existing) {
+          byProduct.set(m.product_id, { total: qty, lastDate: date });
+        } else {
+          existing.total += qty;
+          if (new Date(date) > new Date(existing.lastDate)) {
+            existing.lastDate = date;
+          }
+        }
+      }
+
+      // Fetch product names and calculate monetary loss
+      const productIds = Array.from(byProduct.keys());
+      const productsData: Array<{ product_id: string; product_name: string; total_defective: number; last_return_date: string; monetary_loss: number }> = [];
+
+      for (const pid of productIds) {
+        const product = await this.productModel.findById(pid, storeId);
+        if (product) {
+          const stats = byProduct.get(pid)!;
+          const monetaryLoss = product.cost * stats.total; // Loss = cost × quantity
+          productsData.push({
+            product_id: pid,
+            product_name: product.name,
+            total_defective: stats.total,
+            last_return_date: stats.lastDate,
+            monetary_loss: monetaryLoss
+          });
+        }
+      }
+
+      // Sort by total defective descending
+      productsData.sort((a, b) => b.total_defective - a.total_defective);
+
+      return { products: productsData };
+    } catch (error) {
+      console.error('DashboardService.getDefectiveProducts error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get global summary for all owned stores
+   * Returns total employees and total profit with per-store breakdown
+   */
+  static async getGlobalSummary(userId: string): Promise<{ 
+    totalEmployees: number; 
+    totalProfit: number; 
+    totalRevenue: number;
+    totalExpenses: number;
+    stores: Array<{ 
+      storeId: string; 
+      storeName: string; 
+      month: string; 
+      expenses: number; 
+      revenue: number; 
+      profit: number;
+      employees: number;
+    }> 
+  }> {
+    try {
+      // Get all stores owned by the user
+      const ownedStores = await this.userStoreModel.getOwnedStores(userId);
+      
+      let totalEmployees = 0;
+      let totalRevenue = 0;
+      let totalExpenses = 0;
+      const storesBreakdown: Array<{ 
+        storeId: string; 
+        storeName: string; 
+        month: string; 
+        expenses: number; 
+        revenue: number; 
+        profit: number;
+        employees: number;
+      }> = [];
+
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const currentMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
+      // Get stats for each store
+      for (const userStore of ownedStores) {
+        const store = userStore.store;
+        if (!store) continue;
+
+        // Get employees count for this store (excluding owners)
+        const employees = await this.userModel.findByStore(store.id);
+        const employeeCount = employees.filter(emp => emp.role === 'employee').length;
+        totalEmployees += employeeCount;
+
+        // Get products for monthly expenses
+        const productsResult = await this.productModel.findByStore({
+          store_id: store.id,
+          page: 1,
+          limit: 1000,
+          is_active: true
+        });
+
+        const products = productsResult.products || [];
+        const productsThisMonth = products.filter((p: Product) => new Date(p.created_at) >= startOfMonth);
+        const monthlyExpenses = productsThisMonth.reduce((total: number, product: Product) => {
+          const totalStock = (product.stock_deposito || 0) + (product.stock_venta || 0);
+          return total + (product.cost * totalStock);
+        }, 0);
+
+        // Get sales for monthly revenue
+        const salesResult = await this.saleModel.list({
+          store_id: store.id,
+          page: 1,
+          limit: 1000,
+          payment_status: 'completed'
+        });
+
+        const monthlySalesData = salesResult.sales.filter((sale: any) => new Date(sale.created_at) >= startOfMonth);
+        const monthlyRevenue = monthlySalesData.reduce((total: number, sale: any) => {
+          return total + parseFloat(sale.total || 0);
+        }, 0);
+
+        const profit = monthlyRevenue - monthlyExpenses;
+
+        totalRevenue += monthlyRevenue;
+        totalExpenses += monthlyExpenses;
+
+        storesBreakdown.push({
+          storeId: store.id,
+          storeName: store.name,
+          month: currentMonth,
+          expenses: monthlyExpenses,
+          revenue: monthlyRevenue,
+          profit,
+          employees: employeeCount
+        });
+      }
+
+      const totalProfit = totalRevenue - totalExpenses;
+
+      return {
+        totalEmployees,
+        totalProfit,
+        totalRevenue,
+        totalExpenses,
+        stores: storesBreakdown
+      };
+    } catch (error) {
+      console.error('DashboardService.getGlobalSummary error:', error);
       throw error;
     }
   }

@@ -96,4 +96,98 @@ export class DashboardController {
       });
     }
   }
+
+  /**
+   * Get defective products for a store
+   * GET /api/dashboard/defective-products/:storeId
+   */
+  static async getDefectiveProducts(req: Request, res: Response): Promise<void> {
+    try {
+      const storeId = req.params['storeId'];
+
+      if (!storeId) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'MISSING_STORE_ID',
+            message: 'Store ID is required'
+          },
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      const defectiveProducts = await DashboardService.getDefectiveProducts(storeId);
+
+      res.json({
+        success: true,
+        data: defectiveProducts,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('DashboardController.getDefectiveProducts error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch defective products'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Get global summary for all owned stores
+   * GET /api/dashboard/global-summary
+   */
+  static async getGlobalSummary(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.userId;
+      const userRole = (req as any).user?.role;
+
+      // Only owners can access this endpoint
+      if (userRole !== 'owner') {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Only owners can access global summary'
+          },
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'User authentication required'
+          },
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      const summary = await DashboardService.getGlobalSummary(userId);
+
+      res.json({
+        success: true,
+        data: summary,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('DashboardController.getGlobalSummary error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch global summary'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
 }

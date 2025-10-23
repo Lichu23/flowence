@@ -15,6 +15,7 @@ router.get('/stores/:storeId/sales/:saleId/receipt', requireStoreAccess(), contr
 router.post('/stores/:storeId/sales/:saleId/refund', requireStoreAccess(), controller.refund.bind(controller));
 router.get('/stores/:storeId/sales/:saleId/returns-summary', requireStoreAccess(), controller.returnsSummary.bind(controller));
 router.post('/stores/:storeId/sales/:saleId/returns-batch', requireStoreAccess(), controller.returnItemsBatch.bind(controller));
+router.get('/stores/:storeId/sales/:saleId/returned-products', requireStoreAccess(), controller.getReturnedProducts.bind(controller));
 
 export default router;
 
