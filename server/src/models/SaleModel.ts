@@ -73,4 +73,33 @@ export class SaleModel extends BaseModel {
       .limit(1);
     return data && data.length > 0 ? (data[0] as any).receipt_number : null;
   }
+
+  async searchByTicket(storeId: string, searchTerm: string): Promise<{ sale: Sale; items: SaleItem[] } | null> {
+    // Try to find by sale ID first (barcode scan)
+    let query = this.supabase
+      .from('sales')
+      .select('*')
+      .eq('store_id', storeId);
+
+    // Check if searchTerm looks like a UUID (sale ID from barcode)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(searchTerm)) {
+      query = query.eq('id', searchTerm);
+    } else {
+      // Otherwise search by receipt number
+      query = query.eq('receipt_number', searchTerm);
+    }
+
+    const { data: sale, error } = await query.single();
+    if (error && (error as any).code !== 'PGRST116') this.handleError(error, 'searchByTicket');
+    if (!sale) return null;
+
+    const { data: items } = await this.supabase
+      .from('sale_items')
+      .select('*')
+      .eq('sale_id', (sale as Sale).id)
+      .order('created_at', { ascending: true });
+    
+    return { sale: sale as Sale, items: (items || []) as SaleItem[] };
+  }
 }

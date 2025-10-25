@@ -30,7 +30,6 @@ export class SaleController {
 
   async list(req: any, res: Response): Promise<void> {
     try {
-      const user = req.user;
       const storeId = req.params.storeId as string;
       const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
       const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
@@ -41,7 +40,8 @@ export class SaleController {
 
       const filters = {
         store_id: storeId,
-        user_id: user?.role === 'employee' ? (user.id || user.userId) : undefined,
+        // All users (owners and employees) can see all store sales
+        // Sales belong to the store, not individual users
         payment_method,
         payment_status,
         start_date,
@@ -176,6 +176,37 @@ export class SaleController {
       res.json({ success: true, data: result, timestamp: new Date().toISOString() });
     } catch (error) {
       res.status(400).json({ success: false, error: { code: 'RETURNED_PRODUCTS_FAILED', message: error instanceof Error ? error.message : 'Failed to get returned products' }, timestamp: new Date().toISOString() });
+    }
+  }
+
+  async searchByTicket(req: any, res: Response): Promise<void> {
+    try {
+      const user = req.user;
+      const storeId = req.params.storeId as string;
+      const searchTerm = req.query.ticket as string;
+
+      if (!searchTerm) {
+        res.status(400).json({ success: false, error: { code: 'MISSING_SEARCH_TERM', message: 'Ticket number or barcode is required' }, timestamp: new Date().toISOString() });
+        return;
+      }
+
+      const model = (this.saleService as any).saleModel;
+      const result = await model.searchByTicket(storeId, searchTerm);
+      
+      if (!result) {
+        res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Sale not found' }, timestamp: new Date().toISOString() });
+        return;
+      }
+
+      // If employee, restrict viewing to own sales
+      if (user?.role === 'employee' && result.sale.user_id !== (user.id || user.userId)) {
+        res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not allowed' }, timestamp: new Date().toISOString() });
+        return;
+      }
+
+      res.json({ success: true, data: { sale: result.sale, items: result.items }, timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(400).json({ success: false, error: { code: 'SEARCH_FAILED', message: error instanceof Error ? error.message : 'Failed to search sale' }, timestamp: new Date().toISOString() });
     }
   }
 }

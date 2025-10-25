@@ -354,19 +354,19 @@
 - [x] Sales status updated to "Refund" for full returns
 - [x] Sale details with returned products correctly recorded
 
-#### **Sprint 5.3: Ticket System**
+#### **Sprint 5.3: Ticket System** ✅ COMPLETADO
 
-* [ ] Agregar código de barras al ticket de venta para identificar la compra mediante su ID
-* [ ] Implementar escaneo del código del ticket de pago para recuperar detalles de la venta
-* [ ] Agregar input para filtrar ventas por número o código de ticket
-* [ ] Implementar envío real de invitaciones por email con URL única de acceso para empleados
+* [x] Agregar código de barras al ticket de venta para identificar la compra mediante su ID
+* [x] Implementar escaneo del código del ticket de pago para recuperar detalles de la venta
+* [x] Agregar input para filtrar ventas por número o código de ticket
+* [x] Implementar envío real de invitaciones por email con URL única de acceso para empleados
 
 **Deliverables:**
 
-* [ ] Tickets de venta con código de barras funcional
-* [ ] Escaneo y filtrado de tickets operativo
-* [ ] Sistema de invitación por correo activo
-* [ ] Documentación actualizada
+* [x] Tickets de venta con código de barras funcional
+* [x] Escaneo y filtrado de tickets operativo
+* [x] Sistema de invitación por correo activo
+* [x] Documentación actualizada
 
 #### Sprint 5.4: Deployment
 - [ ] Production environment setup

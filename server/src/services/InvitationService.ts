@@ -9,6 +9,7 @@ import { StoreModel } from '../models/StoreModel';
 import { UserStoreModel } from '../models/UserStoreModel';
 import { UserInvitation } from '../types/user';
 import { config } from '../config';
+import { emailService } from './EmailService';
 
 const invitationModel = new InvitationModel();
 const userModel = new UserModel();
@@ -85,9 +86,23 @@ export class InvitationService {
     console.log(`  Token: ${invitation.token.substring(0, 10)}...`);
     console.log(`  URL: ${invitationUrl}`);
 
-    // TODO: Send email via SendGrid
-    // For now, we just return the URL
-    console.log('📧 Email sending will be implemented in next step');
+    // Send invitation email
+    try {
+      const inviter = await userModel.findById(data.invited_by);
+      const inviterName = inviter?.name || 'El propietario';
+      
+      await emailService.sendInvitationEmail(
+        data.email,
+        store.name,
+        inviterName,
+        invitationUrl,
+        expiresAt
+      );
+      console.log('📧 Invitation email sent successfully');
+    } catch (emailError) {
+      console.error('⚠️  Failed to send invitation email:', emailError);
+      // Continue even if email fails - user can still use the URL
+    }
 
     return {
       invitation,
@@ -307,7 +322,26 @@ export class InvitationService {
 
     console.log('📨 Invitation resent:', invitationId);
 
-    // TODO: Send email via SendGrid
+    // Send invitation email
+    try {
+      const store = await storeModel.findById(invitation.store_id);
+      const inviter = await userModel.findById(userId);
+      const inviterName = inviter?.name || 'El propietario';
+      const storeName = store?.name || 'la tienda';
+      const expiresAt = new Date(invitation.expires_at);
+      
+      await emailService.sendInvitationEmail(
+        invitation.email,
+        storeName,
+        inviterName,
+        invitationUrl,
+        expiresAt
+      );
+      console.log('📧 Invitation email resent successfully');
+    } catch (emailError) {
+      console.error('⚠️  Failed to resend invitation email:', emailError);
+      // Continue even if email fails - user can still use the URL
+    }
 
     return {
       invitation,

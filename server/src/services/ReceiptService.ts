@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { Sale, SaleItem } from '../types/sale';
+import bwipjs from 'bwip-js';
 
 export class ReceiptService {
   async generateReceiptPdf(
@@ -7,6 +8,22 @@ export class ReceiptService {
     items: SaleItem[],
     store: { name: string; address?: string; phone?: string; currency?: string; timezone?: string; date_format?: string; time_format?: string }
   ): Promise<Buffer> {
+    // Generate barcode before creating the PDF document
+    let barcodeBuffer: Buffer | null = null;
+    try {
+      barcodeBuffer = await bwipjs.toBuffer({
+        bcid: 'code128',       // Barcode type
+        text: sale.id,         // Sale ID as barcode data
+        scale: 3,              // 3x scaling factor
+        height: 10,            // Bar height, in millimeters
+        includetext: true,     // Show human-readable text
+        textxalign: 'center'   // Always good to set this
+      });
+    } catch (barcodeError) {
+      console.error('Error generating barcode:', barcodeError);
+      // Continue without barcode if generation fails
+    }
+
     const doc = new PDFDocument({
       size: 'A4',
       margin: 50,
@@ -63,7 +80,18 @@ export class ReceiptService {
         doc.text(info);
       });
       
-      doc.moveDown(1.5);
+      doc.moveDown(0.5);
+
+      // Barcode Section - Add barcode for sale ID
+      if (barcodeBuffer) {
+        // Center the barcode
+        const barcodeWidth = 200;
+        const barcodeX = (pageWidth - barcodeWidth) / 2;
+        doc.image(barcodeBuffer, barcodeX, doc.y, { width: barcodeWidth });
+        doc.moveDown(1);
+      }
+
+      doc.moveDown(1);
 
       // Items Section
       doc.fontSize(14).font('Helvetica-Bold').text('DETALLE DE PRODUCTOS', { align: 'center' });
