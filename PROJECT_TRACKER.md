@@ -5,7 +5,7 @@
 **Version:** 1.0 (MVP) - Multi-Store Edition  
 **Start Date:** October 2025  
 **Target Completion:** [To be defined]  
-**Status:** Phase 5 - Testing & Deployment ⚡ IN PROGRESS (Sprint 5.1 - 50%)  
+**Status:** Phase 5 - Testing & Deployment ⚡ IN PROGRESS (Sprint 5.5 - 100%)  
 
 ## Key Architecture Difference
 **🏪 Multi-Store Capability:** Each owner can manage **multiple stores**. Employees belong to specific stores within an owner's organization.
@@ -368,6 +368,31 @@
 * [x] Sistema de invitación por correo activo
 * [x] Documentación actualizada
 
+
+#### Sprint 5.5: Dashboard and Payment System ✅ COMPLETADO
+
+- [x] Add currency support for Argentine pesos (ARS)
+- [x] Display total losses from defective products
+- [x] Include metric for total number of refunded orders
+- [x] Show overall totals for sales and expenses in the main dashboard (not separated by months)
+- [x] Create a separate section to view data by month
+- [x] Allow, in case of multiple stores, to view monthly expenses, profits, and metrics per store
+
+QR Payment Integration (Stripe):
+- [x] Implement QR payment.
+- [x] Generate a link or QR code when the customer chooses to pay by card
+- [x] Connect the flow with Stripe to process the payment
+- [x] Upon payment confirmation:
+  - [x] Mark the sale as paid
+  - [x] Automatically update inventory
+  - [x] Automatically generate the purchase receipt
+
+Deliverables:
+- [x] Dashboard with new operational metrics (losses, refunds, totals, monthly data)
+- [x] Fully functional QR payment system integrated with Stripe
+- [x] Automated inventory updates and billing after payment
+- [x] Updated technical and functional documentation
+
 #### Sprint 5.4: Deployment
 - [ ] Production environment setup
 - [ ] CI/CD pipeline
@@ -604,16 +629,16 @@ Phase 1 complete. Ready to start Phase 2: Inventory & User Management
 
 ---
 
-**Last Updated:** October 20, 2025  
+**Last Updated:** October 27, 2025  
 **Next Review:** Weekly  
-**Status:** Phase 5 ⚡ IN PROGRESS - Testing & Deployment (Sprint 5.1 - 50%)  
+**Status:** Phase 5 ⚡ IN PROGRESS - Testing & Deployment (Sprint 5.5 - 100%)  
 **Architecture:** Multi-Store from the start  
-**Current Sprint:** Sprint 5.1 - Testing Infrastructure  
-**Backend Status:** ✅ Complete through Phase 4 (Auth, Multi-Store, Dual Stock, Sales, Config)  
-**Frontend Status:** ✅ Complete through Phase 4 (All features + UI/UX Polish)  
+**Current Sprint:** Sprint 5.4 - Deployment Preparation  
+**Backend Status:** ✅ Complete through Phase 5 (Auth, Multi-Store, Dual Stock, Sales, Config, Dashboard & Payments)  
+**Frontend Status:** ✅ Complete through Phase 5 (All features + UI/UX Polish + Dashboard Enhancements + QR Payments)  
 **Testing Status:** ⚡ Infrastructure complete, 78 tests written, pending execution  
 **Phase 1:** ✅ COMPLETE - Foundation established  
 **Phase 2:** ✅ COMPLETE - Inventory & User Management  
 **Phase 3:** ✅ COMPLETE - Sales & Scanner Integration  
 **Phase 4:** ✅ COMPLETE - Store Configuration & Polish  
-**Phase 5:** ⚡ IN PROGRESS - Testing & Deployment (Sprint 5.1 50%)
+**Phase 5:** ⚡ IN PROGRESS - Testing & Deployment (Sprint 5.5 100% - Ready for Sprint 5.4)

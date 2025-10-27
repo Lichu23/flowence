@@ -93,6 +93,46 @@ export class PaymentController {
       });
     }
   }
+
+  async getPaymentStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { paymentIntentId } = req.params as any;
+
+      if (!paymentIntentId) {
+        res.status(400).json({ 
+          success: false, 
+          error: { 
+            code: 'MISSING_PAYMENT_INTENT_ID', 
+            message: 'payment_intent_id is required' 
+          }, 
+          timestamp: new Date().toISOString() 
+        });
+        return;
+      }
+
+      // Retrieve payment intent status from Stripe
+      const paymentIntent = await this.paymentService.retrievePaymentIntent(paymentIntentId);
+      
+      res.json({
+        success: true,
+        data: {
+          status: paymentIntent.status,
+          payment_intent_id: paymentIntent.id
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('PaymentController.getPaymentStatus error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'PAYMENT_STATUS_FAILED',
+          message: error instanceof Error ? error.message : 'Failed to retrieve payment status'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
 }
 
 

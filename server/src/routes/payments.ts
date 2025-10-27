@@ -10,6 +10,7 @@ router.use(authenticate);
 
 router.post('/:storeId/payments/intents', requireStoreAccess(), controller.createIntent.bind(controller));
 router.post('/:storeId/payments/confirm', requireStoreAccess(), controller.confirmPayment.bind(controller));
+router.get('/:storeId/payments/:paymentIntentId/status', requireStoreAccess(), controller.getPaymentStatus.bind(controller));
 
 export default router;
 

@@ -16,6 +16,10 @@ export interface DashboardStats {
   monthlySales?: number; // Sales count for current month
   monthlyRevenue?: number; // Revenue for current month
   currentMonth?: string; // e.g., "Octubre 2025"
+  totalLosses?: number; // Total losses from defective products
+  refundedOrders?: number; // Total number of refunded orders
+  overallRevenue?: number; // Total revenue across all time (not just monthly)
+  overallExpenses?: number; // Total expenses across all time (not just monthly)
 }
 
 export interface StoreInventoryStats {
@@ -111,6 +115,12 @@ export class DashboardService {
           const totalStock = (product.stock_deposito || 0) + (product.stock_venta || 0);
           return total + (product.cost * totalStock);
         }, 0);
+
+        // Calculate overall expenses (all-time)
+        stats.overallExpenses = products.reduce((total: number, product: Product) => {
+          const totalStock = (product.stock_deposito || 0) + (product.stock_venta || 0);
+          return total + (product.cost * totalStock);
+        }, 0);
       }
 
       // Get sales statistics for the store
@@ -127,6 +137,32 @@ export class DashboardService {
       stats.revenue = salesResult.sales.reduce((total: number, sale: any) => {
         return total + parseFloat(sale.total || 0);
       }, 0);
+
+      // Calculate overall revenue (all-time)
+      stats.overallRevenue = stats.revenue;
+
+      // Calculate total losses from defective products
+      const defectiveMovements = await (this.productModel as any)['supabase']
+        .from('stock_movements')
+        .select('quantity_change, product_id')
+        .eq('store_id', storeId)
+        .eq('movement_type', 'return')
+        .like('reason', '%defective%');
+
+      if (!defectiveMovements.error) {
+        let totalLosses = 0;
+        for (const movement of defectiveMovements.data || []) {
+          const product = await this.productModel.findById(movement.product_id, storeId);
+          if (product) {
+            totalLosses += product.cost * Math.abs(Number(movement.quantity_change || 0));
+          }
+        }
+        stats.totalLosses = totalLosses;
+      }
+
+      // Calculate refunded orders
+      const refundedSales = salesResult.sales.filter((sale: any) => sale.status === 'refund');
+      stats.refundedOrders = refundedSales.length;
 
       // Calculate monthly sales and revenue
       if (userRole === 'owner') {

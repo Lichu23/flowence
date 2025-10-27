@@ -102,4 +102,54 @@ export class SaleModel extends BaseModel {
     
     return { sale: sale as Sale, items: (items || []) as SaleItem[] };
   }
+
+  async updateSale(
+    saleId: string, 
+    storeId: string, 
+    updates: {
+      subtotal?: number;
+      tax?: number;
+      discount?: number;
+      total?: number;
+    }
+  ): Promise<Sale> {
+    const { data, error } = await this.supabase
+      .from('sales')
+      .update(updates)
+      .eq('id', saleId)
+      .eq('store_id', storeId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating sale:', error);
+      throw new Error(`Failed to update sale: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Sale not found');
+    }
+
+    return data as Sale;
+  }
+
+  async updateSaleItem(
+    itemId: string, 
+    updates: {
+      unit_price?: number;
+      subtotal?: number;
+      discount?: number;
+      total?: number;
+    }
+  ): Promise<void> {
+    const { error } = await this.supabase
+      .from('sale_items')
+      .update(updates)
+      .eq('id', itemId);
+
+    if (error) {
+      console.error('Error updating sale item:', error);
+      throw new Error(`Failed to update sale item: ${error.message}`);
+    }
+  }
 }
