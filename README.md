@@ -1,63 +1,45 @@
-\documentclass[11pt]{article}
+# Flowence
 
-\usepackage[a4paper,margin=1in]{geometry}
-\usepackage{hyperref}
-\usepackage{enumitem}
-\usepackage{inconsolata}
-\usepackage{xcolor}
+All-in-one Supermarket/Warehouse Management (PWA)
+[https://github.com/Lichu23/flowence](https://github.com/Lichu23/flowence)
 
-\hypersetup{
-  colorlinks=true,
-  linkcolor=blue!70!black,
-  urlcolor=blue!70!black,
-  citecolor=blue!70!black
-}
+## Overview
 
-\begin{document}
-
-\begin{center}
-{\LARGE \textbf{Flowence}}\\[4pt]
-{\large All-in-one Supermarket/Warehouse Management (PWA)}\\[2pt]
-\url{https://github.com/Lichu23/flowence}
-\end{center}
-
-\section*{Overview}
 Flowence is a full-stack web application for small and medium retail businesses. It enables multi-store management, inventory and stock control, barcode scanning via QuaggaJS, and end-to-end sales processing with Stripe. The app supports role-based access (owners and employees), invitations via SendGrid, and robust operational tooling such as low-stock alerts and receipts. The frontend is built with Next.js 15 + React 18 + TypeScript (PWA), and the backend is Node.js + Express + TypeScript with PostgreSQL.
 
-\section*{Key Features}
-\begin{itemize}[leftmargin=1.2em]
-  \item Authentication \& Authorization: JWT-based with Passport.js; role-based access (owner/employee).
-  \item Multi-store: Owners can invite employees; employees scoped to assigned stores.
-  \item Inventory: CRUD products, unique barcodes per store, stock checks, low-stock alerts.
-  \item Sales: Cart/checkout, cash/card/QR payments (Stripe), stock validation, receipts, returns.
-  \item Barcode Scanning: Real-time scanning via QuaggaJS.
-  \item Notifications: Email invites and notifications via SendGrid.
-  \item Currency: Store currency with conversion preview and settings.
-  \item PWA: Mobile-first, installable, responsive UI using Tailwind CSS.
-\end{itemize}
+## Key Features
 
-\section*{Tech Stack}
-\textbf{Frontend}
-\begin{itemize}[leftmargin=1.2em]
-  \item Next.js 15 (App Router), React 18, TypeScript, Tailwind CSS
-  \item PWA: Service worker, caching, installable manifest
-\end{itemize}
-\textbf{Backend}
-\begin{itemize}[leftmargin=1.2em]
-  \item Node.js, Express, TypeScript
-  \item PostgreSQL (primary), with migrations and indexing recommendations
-  \item JWT auth with Passport.js
-  \item Stripe for payments, SendGrid for email
-\end{itemize}
+* **Authentication & Authorization**: JWT-based with Passport.js; role-based access (owner/employee).
+* **Multi-store**: Owners can invite employees; employees scoped to assigned stores.
+* **Inventory**: CRUD products, unique barcodes per store, stock checks, low-stock alerts.
+* **Sales**: Cart/checkout, cash/card/QR payments (Stripe), stock validation, receipts, returns.
+* **Barcode Scanning**: Real-time scanning via QuaggaJS.
+* **Notifications**: Email invites and notifications via SendGrid.
+* **Currency**: Store currency with conversion preview and settings.
+* **PWA**: Mobile-first, installable, responsive UI using Tailwind CSS.
 
-\section*{Repository Structure}
-\begin{itemize}[leftmargin=1.2em]
-  \item \texttt{flowence-client/}: Next.js frontend (TypeScript, Tailwind, PWA)
-  \item \texttt{server/}: Node.js Express API (TypeScript)
-\end{itemize}
+## Tech Stack
 
-\subsection*{Client (Next.js)}
-\begin{verbatim}
+**Frontend**
+
+* Next.js 15 (App Router), React 18, TypeScript, Tailwind CSS
+* PWA: Service worker, caching, installable manifest
+
+**Backend**
+
+* Node.js, Express, TypeScript
+* PostgreSQL (primary), with migrations and indexing recommendations
+* JWT auth with Passport.js
+* Stripe for payments, SendGrid for email
+
+## Repository Structure
+
+* `flowence-client/`: Next.js frontend (TypeScript, Tailwind, PWA)
+* `server/`: Node.js Express API (TypeScript)
+
+### Client (Next.js)
+
+```
 src/
 ├─ app/                 # App Router pages
 ├─ components/          # UI, common, scanner, payments, etc.
@@ -66,10 +48,11 @@ src/
 ├─ lib/                 # API client, utilities
 ├─ types/               # Shared TypeScript definitions
 └─ styles/              # Global styles
-\end{verbatim}
+```
 
-\subsection*{Server (Express)}
-\begin{verbatim}
+### Server (Express)
+
+```
 server/
 ├─ controllers/         # Route handlers
 ├─ routes/              # Express routes
@@ -78,36 +61,40 @@ server/
 ├─ middleware/          # Auth, validation, error handling
 ├─ config/              # Env/config
 └─ types/               # Server-side TypeScript definitions
-\end{verbatim}
+```
 
-\section*{Prerequisites}
-\begin{itemize}[leftmargin=1.2em]
-  \item Node.js 18+
-  \item PostgreSQL 13+
-  \item Stripe account (API keys)
-  \item SendGrid account (API key)
-\end{itemize}
+## Prerequisites
 
-\section*{Environment Variables}
-Create \texttt{.env.local} in \texttt{flowence-client/} and \texttt{.env} in \texttt{server/}. Typical variables:
+* Node.js 18+
+* PostgreSQL 13+
+* Stripe account (API keys)
+* SendGrid account (API key)
 
-\subsection*{Client}
-\begin{verbatim}
+## Environment Variables
+
+Create `.env.local` in `flowence-client/` and `.env` in `server/`. Typical variables:
+
+### Client
+
+```
 NEXT_PUBLIC_API_URL=http://localhost:3002
-\end{verbatim}
+```
 
-\subsection*{Server}
-\begin{verbatim}
+### Server
+
+```
 PORT=3002
 DATABASE_URL=postgres://user:pass@localhost:5432/flowence
 JWT_SECRET=supersecret
 STRIPE_SECRET_KEY=sk_test_xxx
 SENDGRID_API_KEY=SG.xxx
-\end{verbatim}
+```
 
-\section*{Setup \& Development}
-\subsection*{Install Dependencies}
-\begin{verbatim}
+## Setup & Development
+
+### Install Dependencies
+
+```bash
 # client
 cd flowence-client
 npm install
@@ -115,10 +102,11 @@ npm install
 # server
 cd ../server
 npm install
-\end{verbatim}
+```
 
-\subsection*{Run Development}
-\begin{verbatim}
+### Run Development
+
+```bash
 # Start client (Turbopack)
 cd flowence-client
 npm run dev
@@ -126,10 +114,11 @@ npm run dev
 # Start server (nodemon)
 cd ../server
 npm run dev
-\end{verbatim}
+```
 
-\section*{Build \& Production}
-\begin{verbatim}
+## Build & Production
+
+```bash
 # Client (Next.js)
 cd flowence-client
 npm run build
@@ -139,50 +128,52 @@ npm run start
 cd ../server
 npm run build   # if ts build step is configured
 npm run start
-\end{verbatim}
+```
 
-\section*{Testing}
-\begin{itemize}[leftmargin=1.2em]
-  \item Unit/integration tests recommended on both client and server.
-  \item Optional E2E: Playwright in \texttt{flowence-client}. Install with:
-\begin{verbatim}
+## Testing
+
+* Unit/integration tests recommended on both client and server.
+* Optional E2E: Playwright in `flowence-client`. Install with:
+
+```bash
 cd flowence-client
 npm install --save-dev @playwright/test
 npx playwright install
 npx playwright test
-\end{verbatim}
-\end{itemize}
+```
 
-\section*{Security \& Compliance}
-\begin{itemize}[leftmargin=1.2em]
-  \item JWT expiry and refresh strategy
-  \item Input validation/sanitization, parameterized queries
-  \item HTTPS in production; secrets via environment variables
-\end{itemize}
+## Security & Compliance
 
-\section*{Accessibility \& Performance}
-\begin{itemize}[leftmargin=1.2em]
-  \item WCAG: keyboard navigation, color contrast, semantic structure
-  \item Performance: memoization, lazy-loading, caching, DB indexing
-\end{itemize}
+* JWT expiry and refresh strategy
+* Input validation/sanitization, parameterized queries
+* HTTPS in production; secrets via environment variables
 
-\section*{Common Scripts}
-\textbf{Client}
-\begin{verbatim}
+## Accessibility & Performance
+
+* WCAG: keyboard navigation, color contrast, semantic structure
+* Performance: memoization, lazy-loading, caching, DB indexing
+
+## Common Scripts
+
+**Client**
+
+```bash
 npm run dev      # Next dev (Turbopack)
 npm run build    # Next build
 npm run start    # Next start
-\end{verbatim}
-\textbf{Server}
-\begin{verbatim}
+```
+
+**Server**
+
+```bash
 npm run dev      # Nodemon
 npm run start    # Node server
-\end{verbatim}
+```
 
-\section*{License}
-MIT (or your chosen license). See \texttt{LICENSE}.
+## License
 
-\section*{Contributing}
+MIT (or your chosen license). See `LICENSE`.
+
+## Contributing
+
 Issues and PRs are welcome. Please follow TypeScript strictness, testing, and code review checklist.
-
-\end{document}
